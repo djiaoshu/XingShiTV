@@ -1,0 +1,11 @@
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=false
+android.enableJetifier=false
+android.overridePathCheck=true
+
+# If your network requires a proxy, copy this file to gradle.properties
+# and uncomment/update the following values locally. Do not commit local proxy config.
+# systemProp.http.proxyHost=<proxy-host>
+# systemProp.http.proxyPort=<proxy-port>
+# systemProp.https.proxyHost=<proxy-host>
+# systemProp.https.proxyPort=<proxy-port>

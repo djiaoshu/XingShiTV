@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/channel_list_panel"
+    android:layout_width="600dp"
+    android:layout_height="match_parent"
+    android:background="@drawable/channel_panel_background"
+    android:orientation="vertical"
+    android:paddingLeft="20dp"
+    android:paddingTop="22dp"
+    android:paddingRight="20dp"
+    android:paddingBottom="14dp"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="星视TV  ·  LIVE"
+            android:textAllCaps="true"
+            android:textColor="@color/accent"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/channel_list_clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="right"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/channel_list_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="14dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="频道导航"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <ListView
+            android:id="@+id/channel_group_list"
+            android:layout_width="200dp"
+            android:layout_height="match_parent"
+            android:choiceMode="singleChoice"
+            android:clipToPadding="false"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="4dp"
+            android:focusableInTouchMode="true"
+            android:listSelector="@drawable/channel_item_background"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:background="@color/divider" />
+
+        <ListView
+            android:id="@+id/channel_list"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:choiceMode="singleChoice"
+            android:clipToPadding="false"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="4dp"
+            android:focusableInTouchMode="true"
+            android:listSelector="@drawable/channel_item_background"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:paddingTop="9dp"
+        android:text="方向键浏览  ·  确认播放  ·  返回关闭"
+        android:textColor="@color/text_muted"
+        android:textSize="12sp" />
+</LinearLayout>
+
