@@ -1251,6 +1251,9 @@ final class HlsProxyServer implements Closeable {
         } else if (isMgtvUrl(url)) {
             headers.put("User-Agent", BROWSER_USER_AGENT);
             headers.put("Referer", "https://www.mgtv.com/");
+        } else if (isJstvUrl(url)) {
+            headers.put("User-Agent", BROWSER_USER_AGENT);
+            headers.put("Referer", "https://live.jstv.com/");
         } else {
             headers.put("User-Agent", DEFAULT_USER_AGENT);
         }
@@ -1288,6 +1291,11 @@ final class HlsProxyServer implements Closeable {
         return lower.contains(".mgtv.com")
                 || lower.contains("//mgtv.com")
                 || lower.contains(".qing.mgtv.com");
+    }
+
+    private static boolean isJstvUrl(String url) {
+        String lower = url.toLowerCase(Locale.US);
+        return lower.contains(".jstv.com") || lower.contains("//jstv.com");
     }
 
     private static boolean isYangshipinUrl(String url) {

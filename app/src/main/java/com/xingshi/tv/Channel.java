@@ -10,6 +10,10 @@ final class Channel {
     final String yangshipinStreamId;
     final String mgtvActivityId;
     final String mgtvCameraId;
+    final String jstvChannelId;
+    final String jstvEn;
+    final String jstvStreamName;
+    final String jstvPath;
     final String webUrl;
     final String webExtra;
     final String fullscreenType;
@@ -45,15 +49,37 @@ final class Channel {
             String yangshipinPid, String yangshipinStreamId,
             String mgtvActivityId, String mgtvCameraId, String webUrl,
             String webExtra, String fullscreenType) {
+        this(number, name, streamId, url, yangshipinPid, yangshipinStreamId,
+                mgtvActivityId, mgtvCameraId, null, null, null,
+                webUrl, webExtra, fullscreenType);
+    }
+
+    Channel(String number, String name, String streamId, String url,
+            String yangshipinPid, String yangshipinStreamId,
+            String mgtvActivityId, String mgtvCameraId, String jstvChannelId,
+            String jstvEn, String jstvStreamName, String webUrl, String webExtra,
+            String fullscreenType) {
+        this(number, name, streamId, url, yangshipinPid, yangshipinStreamId,
+                mgtvActivityId, mgtvCameraId, jstvChannelId, jstvEn, jstvStreamName,
+                null, webUrl, webExtra, fullscreenType);
+    }
+
+    Channel(String number, String name, String streamId, String url,
+            String yangshipinPid, String yangshipinStreamId,
+            String mgtvActivityId, String mgtvCameraId, String jstvChannelId,
+            String jstvEn, String jstvStreamName, String jstvPath, String webUrl,
+            String webExtra, String fullscreenType) {
         this(number, name, streamId,
                 url == null ? new String[0] : new String[] { url },
                 yangshipinPid, yangshipinStreamId, mgtvActivityId, mgtvCameraId,
+                jstvChannelId, jstvEn, jstvStreamName, jstvPath,
                 webUrl, webExtra, fullscreenType);
     }
 
     private Channel(String number, String name, String streamId, String[] urls,
             String yangshipinPid, String yangshipinStreamId, String mgtvActivityId,
-            String mgtvCameraId, String webUrl, String webExtra, String fullscreenType) {
+            String mgtvCameraId, String jstvChannelId, String jstvEn, String jstvStreamName,
+            String jstvPath, String webUrl, String webExtra, String fullscreenType) {
         this.number = number;
         this.name = name;
         this.streamId = streamId;
@@ -63,6 +89,10 @@ final class Channel {
         this.yangshipinStreamId = yangshipinStreamId;
         this.mgtvActivityId = mgtvActivityId;
         this.mgtvCameraId = mgtvCameraId;
+        this.jstvChannelId = jstvChannelId;
+        this.jstvEn = jstvEn;
+        this.jstvStreamName = jstvStreamName;
+        this.jstvPath = jstvPath;
         this.webUrl = webUrl;
         this.webExtra = webExtra;
         this.fullscreenType = fullscreenType;
@@ -79,6 +109,7 @@ final class Channel {
         combined[urls.length] = additionalUrl;
         return new Channel(number, name, streamId, combined,
                 yangshipinPid, yangshipinStreamId, mgtvActivityId, mgtvCameraId,
+                jstvChannelId, jstvEn, jstvStreamName, jstvPath,
                 webUrl, webExtra, fullscreenType);
     }
 

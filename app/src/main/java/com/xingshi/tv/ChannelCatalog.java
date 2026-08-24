@@ -1,5 +1,20 @@
 package com.xingshi.tv;
 
+import android.content.Context;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+
 final class ChannelCatalog {
     static final int SOURCE_CCTV_WEB = 0;
     static final int SOURCE_YSP_CCTV = 1;
@@ -7,156 +22,76 @@ final class ChannelCatalog {
     static final int SOURCE_CUSTOM = 3;
     static final int SOURCE_MGTV = 4;
     static final int SOURCE_WEBVIEW = 5;
+    static final int SOURCE_JSTV = 6;
     static final String FULLSCREEN_MGTV = "MGTV";
     static final String FULLSCREEN_YANGSHIPIN = "YANGSHIPIN";
 
+    private static final String TAG = "ChannelCatalog";
+    private static final String CONFIG_ASSET = "channel_catalog.json";
     private static final String STREAM_BASE =
             "https://ldocctvwbcdbyte.volcfcdn.com/ldocctvwbcd/";
     private static final String BITRATE_RANGE = "?b=200-4000";
 
-    static final Channel[] CCTV_CHANNELS = new Channel[] {
-            channel("1", "CCTV-1 综合", "cctv1", "600001859", "2024078201"),
-            channel("2", "CCTV-2 财经", "cctv2", "600001800", "2024075401"),
-            channel("3", "CCTV-3 综艺", "cctv3", "600001801", "2024068501"),
-            channel("4", "CCTV-4 中文国际（亚）", "cctv4", "600001814", "2029797101"),
-            channel("5", "CCTV-5 体育", "cctv5", "600001818", "2024078401"),
-            channel("5+", "CCTV-5+ 体育赛事", "cctv5plus", "600001817", "2024078001"),
-            channel("6", "CCTV-6 电影", "cctv6", "600108442", "2013693901"),
-            channel("7", "CCTV-7 国防军事", "cctv7", "600004092", "2024072001"),
-            channel("8", "CCTV-8 电视剧", "cctv8", "600001803", "2029793001"),
-            channel("9", "CCTV-9 纪录", "cctvjilu", "600004078", "2024078601"),
-            channel("10", "CCTV-10 科教", "cctv10", "600001805", "2024078701"),
-            channel("11", "CCTV-11 戏曲", "cctv11", "600001806", "2027248701"),
-            channel("12", "CCTV-12 社会与法", "cctv12", "600001807", "2027248801"),
-            channel("13", "CCTV-13 新闻", "cctv13", "600001811", "2029797201"),
-            channel("14", "CCTV-14 少儿", "cctvchild", "600001809", "2027248901"),
-            channel("15", "CCTV-15 音乐", "cctv15", "600001815", "2027249001"),
-            channel("16", "CCTV-16 奥林匹克", "cctv16", "600098637", "2027249101"),
-            channel("17", "CCTV-17 农业农村", "cctv17", "600001810", "2027249401"),
-            channel("4欧", "CCTV-4 中文国际（欧）", "cctveurope", null, null),
-            channel("4美", "CCTV-4 中文国际（美）", "cctvamerica", null, null)
+    private static final Channel[] FALLBACK_CCTV_CHANNELS = new Channel[] {
+            new Channel("13", "CCTV-13 新闻", "cctv13",
+                    streamUrl("cctv13"), "600001811", "2029797201")
+    };
+    private static final Group[] FALLBACK_GROUPS = new Group[] {
+            new Group("fallback_cctv", "央视网 · 央视频道",
+                    SOURCE_CCTV_WEB, FALLBACK_CCTV_CHANNELS)
     };
 
-    static final Channel[] CHANNELS = CCTV_CHANNELS;
-
-    // Keep this order and naming aligned with https://www.yangshipin.cn/tv/home.
-    // The first group above remains the smaller CCTV.com fallback catalog.
-    static final Channel[] YANGSHIPIN_CCTV_CHANNELS = new Channel[] {
-            yangshipinChannel("1", "CCTV1", "600001859", "2024078201"),
-            yangshipinChannel("2", "CCTV2", "600001800", "2024075401"),
-            yangshipinChannel("3", "CCTV3", "600001801", "2024068501"),
-            yangshipinChannel("4", "CCTV4", "600001814", "2029797101"),
-            yangshipinChannel("5", "CCTV5", "600001818", "2024078401"),
-            yangshipinChannel("6", "CCTV5+", "600001817", "2024078001"),
-            yangshipinChannel("7", "CCTV6", "600108442", "2013693901"),
-            yangshipinChannel("8", "CCTV7", "600004092", "2024072001"),
-            yangshipinChannel("9", "CCTV8", "600001803", "2029793001"),
-            yangshipinChannel("10", "CCTV9", "600004078", "2024078601"),
-            yangshipinChannel("11", "CCTV10", "600001805", "2024078701"),
-            yangshipinChannel("12", "CCTV11", "600001806", "2027248701"),
-            yangshipinChannel("13", "CCTV12", "600001807", "2027248801"),
-            yangshipinChannel("14", "CCTV13", "600001811", "2029797201"),
-            yangshipinChannel("15", "CCTV14", "600001809", "2027248901"),
-            yangshipinChannel("16", "CCTV15", "600001815", "2027249001"),
-            yangshipinChannel("17", "CCTV16-HD", "600098637", "2027249101"),
-            yangshipinChannel("18", "CCTV16(4K）", "600099502", "2027249301"),
-            yangshipinChannel("19", "CCTV17", "600001810", "2027249401"),
-            yangshipinChannel("20", "CCTV4K", "600002264", "2029810301"),
-            yangshipinChannel("21", "CCTV8K", "600156816", "2026774101"),
-            yangshipinChannel("22", "CGTN", "600014550", "2024181701"),
-            yangshipinChannel("23", "CGTN法语频道", "600084704", "2024181801"),
-            yangshipinChannel("24", "CGTN俄语频道", "600084758", "2024181901"),
-            yangshipinChannel("25", "CGTN阿拉伯语频道", "600084782", "2024182001"),
-            yangshipinChannel("26", "CGTN西班牙语频道", "600084744", "2024182101"),
-            yangshipinChannel("27", "CGTN外语纪录频道", "600084781", "2024182301")
-    };
-
-    static final Channel[] SATELLITE_CHANNELS = new Channel[] {
-            yangshipinChannel("1", "北京卫视", "600002309", "2024052703"),
-            yangshipinChannel("2", "江苏卫视", "600002521", "2024171103"),
-            yangshipinChannel("3", "东方卫视", "600002483", "2024054503"),
-            yangshipinChannel("4", "浙江卫视", "600002520", "2024054703"),
-            yangshipinChannel("5", "湖南卫视", "600002475", "2024054803"),
-            yangshipinChannel("6", "湖北卫视", "600002508", "2024171203"),
-            yangshipinChannel("7", "广东卫视", "600002485", "2024060903"),
-            yangshipinChannel("8", "广西卫视", "600002509", "2024060703"),
-            yangshipinChannel("9", "黑龙江卫视", "600002498", "2029797003"),
-            yangshipinChannel("10", "海南卫视", "600002506", "2024055603"),
-            yangshipinChannel("11", "重庆卫视", "600002531", "2024061103"),
-            yangshipinChannel("12", "深圳卫视", "600002481", "2024061303"),
-            yangshipinChannel("13", "四川卫视", "600002516", "2024061403"),
-            yangshipinChannel("14", "河南卫视", "600002525", "2029797303"),
-            yangshipinChannel("15", "福建东南卫视", "600002484", "2024061503"),
-            yangshipinChannel("16", "贵州卫视", "600002490", "2024061603"),
-            yangshipinChannel("17", "江西卫视", "600002503", "2024061703"),
-            yangshipinChannel("18", "辽宁卫视", "600002505", "2024171303"),
-            yangshipinChannel("19", "安徽卫视", "600002532", "2024171403"),
-            yangshipinChannel("20", "河北卫视", "600002493", "2024171503"),
-            yangshipinChannel("21", "山东卫视", "600002513", "2029787903"),
-            yangshipinChannel("22", "天津卫视", "600152137", "2019927003"),
-            yangshipinChannel("23", "吉林卫视", "600190405", "2025561503"),
-            yangshipinChannel("24", "陕西卫视", "600190400", "2029795103"),
-            yangshipinChannel("25", "甘肃卫视", "600190408", "2025561703"),
-            yangshipinChannel("26", "宁夏卫视", "600190737", "2025608503"),
-            yangshipinChannel("27", "内蒙古卫视", "600190401", "2025561203"),
-            yangshipinChannel("28", "云南卫视", "600190402", "2025561303"),
-            yangshipinChannel("29", "山西卫视", "600190407", "2025560803"),
-            yangshipinChannel("30", "青海卫视", "600190406", "2025559103"),
-            yangshipinChannel("31", "西藏卫视", "600190403", "2025558003"),
-            yangshipinChannel("32", "中国教育电视台1频道", "600171827", "2022823801"),
-            yangshipinChannel("33", "新疆卫视", "600152138", "2019927403")
-    };
-
-    static final Channel[] HUNAN_LOCAL_CHANNELS = new Channel[] {
-            mgtvChannel("101", "湖南都市", "346", "346"),
-            mgtvChannel("102", "湖南经视", "280", "280"),
-            mgtvChannel("103", "湖南娱乐", "344", "344"),
-            mgtvChannel("104", "金鹰卡通", "287", "287"),
-            mgtvChannel("105", "金鹰纪实", "316", "316"),
-            mgtvChannel("106", "湖南电影", "221", "221")
-    };
-
-    static final Channel[] WEBVIEW_CHANNELS = new Channel[] {
-            webviewChannel("201", "湖南卫视网页",
-                    "https://www.yangshipin.cn/tv/home?pid=600002475",
-                    null, FULLSCREEN_YANGSHIPIN),
-            webviewChannel("202", "湖南经视网页",
-                    "https://www.mgtv.com/live/", "热门 湖南经视", FULLSCREEN_MGTV),
-            webviewChannel("203", "湖南都市网页",
-                    "https://www.mgtv.com/live/", "热门 湖南都市", FULLSCREEN_MGTV),
-            webviewChannel("204", "湖南娱乐网页",
-                    "https://www.mgtv.com/live/", "热门 湖南娱乐", FULLSCREEN_MGTV),
-            webviewChannel("205", "湖南电影网页",
-                    "https://www.mgtv.com/live/", "热门 湖南电影", FULLSCREEN_MGTV),
-            webviewChannel("206", "湖南电视剧网页",
-                    "https://www.mgtv.com/live/", "热门 湖南电视剧", FULLSCREEN_MGTV),
-            webviewChannel("207", "金鹰卡通网页",
-                    "https://www.mgtv.com/live/", "热门 金鹰卡通", FULLSCREEN_MGTV),
-            webviewChannel("208", "金鹰纪实网页",
-                    "https://www.mgtv.com/live/", "热门 金鹰纪实", FULLSCREEN_MGTV)
-    };
-
-    private static final Group[] BUILT_IN_GROUPS = new Group[] {
-            new Group("央视网 · 央视频道", SOURCE_CCTV_WEB, CCTV_CHANNELS),
-            new Group("央视频 · 央视频道", SOURCE_YSP_CCTV, YANGSHIPIN_CCTV_CHANNELS),
-            new Group("央视频 · 卫视频道", SOURCE_YSP_SATELLITE, SATELLITE_CHANNELS),
-            new Group("湖南地方频道", SOURCE_MGTV, HUNAN_LOCAL_CHANNELS),
-            new Group("网页播放备用", SOURCE_WEBVIEW, WEBVIEW_CHANNELS)
-    };
-
-    static volatile Group[] GROUPS = BUILT_IN_GROUPS;
+    static volatile Channel[] CCTV_CHANNELS = FALLBACK_CCTV_CHANNELS;
+    static volatile Channel[] CHANNELS = CCTV_CHANNELS;
+    private static volatile Group[] builtInGroups = FALLBACK_GROUPS;
+    static volatile Group[] GROUPS = builtInGroups;
+    private static boolean initialized;
+    private static Group[] customGroups = new Group[0];
 
     private ChannelCatalog() {
     }
 
-    static synchronized void setCustomGroups(Group[] customGroups) {
-        if (customGroups == null || customGroups.length == 0) {
-            GROUPS = BUILT_IN_GROUPS;
+    static synchronized void initialize(Context context) {
+        if (initialized) {
             return;
         }
-        Group[] groups = new Group[BUILT_IN_GROUPS.length + customGroups.length];
-        System.arraycopy(BUILT_IN_GROUPS, 0, groups, 0, BUILT_IN_GROUPS.length);
-        System.arraycopy(customGroups, 0, groups, BUILT_IN_GROUPS.length, customGroups.length);
+        try {
+            Group[] loaded = loadFromAssets(context);
+            if (loaded.length == 0) {
+                throw new IOException("No channel groups in " + CONFIG_ASSET);
+            }
+            builtInGroups = loaded;
+            CCTV_CHANNELS = findChannelsBySource(loaded, SOURCE_CCTV_WEB);
+            if (CCTV_CHANNELS.length == 0) {
+                CCTV_CHANNELS = loaded[0].channels;
+            }
+            CHANNELS = CCTV_CHANNELS;
+            Log.i(TAG, "Loaded channel config groups=" + loaded.length
+                    + " channels=" + countChannels(loaded));
+        } catch (IOException error) {
+            builtInGroups = FALLBACK_GROUPS;
+            CCTV_CHANNELS = FALLBACK_CCTV_CHANNELS;
+            CHANNELS = CCTV_CHANNELS;
+            Log.e(TAG, "Failed to load " + CONFIG_ASSET
+                    + ", using minimal fallback", error);
+        }
+        initialized = true;
+        rebuildGroups();
+    }
+
+    static synchronized void setCustomGroups(Group[] groups) {
+        customGroups = groups == null ? new Group[0] : groups;
+        rebuildGroups();
+    }
+
+    private static void rebuildGroups() {
+        if (customGroups.length == 0) {
+            GROUPS = builtInGroups;
+            return;
+        }
+        Group[] groups = new Group[builtInGroups.length + customGroups.length];
+        System.arraycopy(builtInGroups, 0, groups, 0, builtInGroups.length);
+        System.arraycopy(customGroups, 0, groups, builtInGroups.length, customGroups.length);
         GROUPS = groups;
     }
 
@@ -222,36 +157,206 @@ final class ChannelCatalog {
         return url + BITRATE_RANGE;
     }
 
-    private static Channel channel(String number, String name, String streamId,
-            String yangshipinPid, String yangshipinStreamId) {
-        return new Channel(number, name, streamId, streamUrl(streamId),
-                yangshipinPid, yangshipinStreamId);
+    private static Group[] loadFromAssets(Context context) throws IOException {
+        String json = readAsset(context, CONFIG_ASSET);
+        try {
+            JSONObject root = new JSONObject(json);
+            JSONArray groupItems = root.optJSONArray("groups");
+            JSONArray channelItems = root.optJSONArray("channels");
+            if (groupItems == null || channelItems == null) {
+                throw new IOException("Missing groups or channels array");
+            }
+            LinkedHashMap<String, GroupBuilder> builders = readGroups(groupItems);
+            readChannels(channelItems, builders);
+            ArrayList<GroupBuilder> ordered = new ArrayList<GroupBuilder>(builders.values());
+            Collections.sort(ordered, new Comparator<GroupBuilder>() {
+                @Override
+                public int compare(GroupBuilder left, GroupBuilder right) {
+                    return left.order - right.order;
+                }
+            });
+            ArrayList<Group> groups = new ArrayList<Group>();
+            for (GroupBuilder builder : ordered) {
+                if (builder.channels.isEmpty()) {
+                    Log.w(TAG, "Skip empty channel group id=" + builder.id);
+                    continue;
+                }
+                Collections.sort(builder.channels, new Comparator<ChannelEntry>() {
+                    @Override
+                    public int compare(ChannelEntry left, ChannelEntry right) {
+                        return left.order - right.order;
+                    }
+                });
+                Channel[] channels = new Channel[builder.channels.size()];
+                for (int index = 0; index < builder.channels.size(); index++) {
+                    channels[index] = builder.channels.get(index).channel;
+                }
+                groups.add(new Group(builder.id, builder.name, builder.source, channels));
+            }
+            return groups.toArray(new Group[groups.size()]);
+        } catch (JSONException error) {
+            throw new IOException("Invalid " + CONFIG_ASSET, error);
+        }
     }
 
-    private static Channel yangshipinChannel(String number, String name,
-            String yangshipinPid, String yangshipinStreamId) {
-        return new Channel(number, name, "ysp_" + yangshipinPid, null,
-                yangshipinPid, yangshipinStreamId);
+    private static LinkedHashMap<String, GroupBuilder> readGroups(JSONArray groupItems)
+            throws JSONException {
+        LinkedHashMap<String, GroupBuilder> builders = new LinkedHashMap<String, GroupBuilder>();
+        for (int index = 0; index < groupItems.length(); index++) {
+            JSONObject item = groupItems.getJSONObject(index);
+            String id = item.optString("id", "");
+            String name = item.optString("name", "");
+            int source = sourceFromName(item.optString("sourceType", ""));
+            if (id.length() == 0 || name.length() == 0 || source < 0) {
+                Log.w(TAG, "Skip invalid group index=" + index);
+                continue;
+            }
+            builders.put(id, new GroupBuilder(id, name, source,
+                    item.optInt("order", index + 1)));
+        }
+        return builders;
     }
 
-    private static Channel mgtvChannel(String number, String name,
-            String activityId, String cameraId) {
-        return new Channel(number, name, "mgtv_" + activityId, null,
-                null, null, activityId, cameraId);
+    private static void readChannels(JSONArray channelItems,
+            LinkedHashMap<String, GroupBuilder> builders) throws JSONException {
+        for (int index = 0; index < channelItems.length(); index++) {
+            JSONObject item = channelItems.getJSONObject(index);
+            String groupId = item.optString("groupId", "");
+            GroupBuilder group = builders.get(groupId);
+            if (group == null) {
+                Log.w(TAG, "Skip channel with unknown groupId=" + groupId);
+                continue;
+            }
+            int source = sourceFromName(item.optString("sourceType", ""));
+            if (source < 0) {
+                source = group.source;
+            }
+            Channel channel = buildChannel(item, source, index);
+            if (channel == null) {
+                continue;
+            }
+            group.channels.add(new ChannelEntry(channel, item.optInt("order", index + 1)));
+        }
     }
 
-    private static Channel webviewChannel(String number, String name, String url) {
-        return webviewChannel(number, name, url, null, null);
+    private static Channel buildChannel(JSONObject item, int source, int index) {
+        String number = item.optString("number", String.valueOf(index + 1));
+        String name = item.optString("name", "");
+        if (name.length() == 0) {
+            Log.w(TAG, "Skip unnamed channel index=" + index);
+            return null;
+        }
+        String streamId = item.optString("streamId", null);
+        String url = item.optString("url", null);
+        String yangshipinPid = item.optString("yangshipinPid", null);
+        String yangshipinStreamId = item.optString("yangshipinStreamId", null);
+        String activityId = item.optString("activityId", null);
+        String cameraId = item.optString("cameraId", null);
+        String jstvChannelId = item.optString("channelId", null);
+        String jstvEn = item.optString("en", null);
+        String jstvStreamName = item.optString("stream", null);
+        String jstvPath = item.optString("path", null);
+        String webUrl = item.optString("webUrl", null);
+        String webExtra = item.optString("webExtra", null);
+        String fullscreenType = item.optString("fullscreenType", null);
+
+        if (source == SOURCE_CCTV_WEB) {
+            if (streamId == null || streamId.length() == 0) {
+                Log.w(TAG, "Skip CCTV channel without streamId name=" + name);
+                return null;
+            }
+            if (url == null || url.length() == 0) {
+                url = streamUrl(streamId);
+            }
+        } else if (source == SOURCE_YSP_CCTV || source == SOURCE_YSP_SATELLITE) {
+            if (yangshipinPid == null || yangshipinPid.length() == 0) {
+                Log.w(TAG, "Skip Yangshipin channel without pid name=" + name);
+                return null;
+            }
+            streamId = "ysp_" + yangshipinPid;
+        } else if (source == SOURCE_MGTV) {
+            if (activityId == null || activityId.length() == 0) {
+                Log.w(TAG, "Skip MGTV channel without activityId name=" + name);
+                return null;
+            }
+            streamId = "mgtv_" + activityId;
+        } else if (source == SOURCE_JSTV) {
+            if (jstvEn == null || jstvEn.length() == 0
+                    || jstvStreamName == null || jstvStreamName.length() == 0
+                    || jstvPath == null || jstvPath.length() == 0) {
+                Log.w(TAG, "Skip JSTV channel with incomplete config name=" + name);
+                return null;
+            }
+            streamId = "jstv_" + jstvEn;
+        } else if (source == SOURCE_WEBVIEW) {
+            if (webUrl == null || webUrl.length() == 0) {
+                Log.w(TAG, "Skip WebView channel without webUrl name=" + name);
+                return null;
+            }
+            streamId = "webview_" + number;
+        }
+
+        return new Channel(number, name, streamId, url,
+                yangshipinPid, yangshipinStreamId, activityId, cameraId,
+                jstvChannelId, jstvEn, jstvStreamName, jstvPath,
+                webUrl, webExtra, fullscreenType);
     }
 
-    private static Channel webviewChannel(String number, String name, String url, String extra) {
-        return webviewChannel(number, name, url, extra, null);
+    private static int sourceFromName(String value) {
+        if ("CCTV_WEB".equals(value)) {
+            return SOURCE_CCTV_WEB;
+        }
+        if ("YSP_CCTV".equals(value)) {
+            return SOURCE_YSP_CCTV;
+        }
+        if ("YSP_SATELLITE".equals(value)) {
+            return SOURCE_YSP_SATELLITE;
+        }
+        if ("MGTV".equals(value)) {
+            return SOURCE_MGTV;
+        }
+        if ("WEBVIEW".equals(value)) {
+            return SOURCE_WEBVIEW;
+        }
+        if ("JSTV".equals(value)) {
+            return SOURCE_JSTV;
+        }
+        if ("CUSTOM".equals(value)) {
+            return SOURCE_CUSTOM;
+        }
+        return -1;
     }
 
-    private static Channel webviewChannel(String number, String name, String url,
-            String extra, String fullscreenType) {
-        return new Channel(number, name, "webview_" + number, null,
-                null, null, null, null, url, extra, fullscreenType);
+    private static String readAsset(Context context, String name) throws IOException {
+        InputStream input = context.getAssets().open(name);
+        try {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                output.write(buffer, 0, count);
+            }
+            return output.toString("UTF-8");
+        } finally {
+            input.close();
+        }
+    }
+
+    private static Channel[] findChannelsBySource(Group[] groups, int source) {
+        for (Group group : groups) {
+            if (group.source == source) {
+                return group.channels;
+            }
+        }
+        return new Channel[0];
+    }
+
+    private static int countChannels(Group[] groups) {
+        int count = 0;
+        for (Group group : groups) {
+            count += group.channels.length;
+        }
+        return count;
     }
 
     private static String streamUrl(String streamId) {
@@ -290,16 +395,46 @@ final class ChannelCatalog {
         return STREAM_BASE + "cdrmld" + streamId + "_1/index.m3u8" + BITRATE_RANGE;
     }
 
+    private static final class GroupBuilder {
+        final String id;
+        final String name;
+        final int source;
+        final int order;
+        final ArrayList<ChannelEntry> channels = new ArrayList<ChannelEntry>();
+
+        GroupBuilder(String id, String name, int source, int order) {
+            this.id = id;
+            this.name = name;
+            this.source = source;
+            this.order = order;
+        }
+    }
+
+    private static final class ChannelEntry {
+        final Channel channel;
+        final int order;
+
+        ChannelEntry(Channel channel, int order) {
+            this.channel = channel;
+            this.order = order;
+        }
+    }
+
     static final class Group {
+        final String id;
         final String title;
         final int source;
         final Channel[] channels;
 
         Group(String title, int source, Channel[] channels) {
+            this(null, title, source, channels);
+        }
+
+        Group(String id, String title, int source, Channel[] channels) {
+            this.id = id;
             this.title = title;
             this.source = source;
             this.channels = channels;
         }
     }
 }
-

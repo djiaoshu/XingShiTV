@@ -54,7 +54,7 @@ public final class MainActivity extends Activity {
     private static final String LAST_GROUP_INDEX = "last_group_index";
     private static final String LAST_CHANNEL_INDEX = "last_channel_index";
     private static final String REVERSE_UP_DOWN = "reverse_up_down";
-    private static final String GITHUB_URL = "https://github.com/buhanzhe/NativeWasmTv";
+    private static final String GITHUB_URL = "https://github.com/djiaoshu/XingShiTV";
     private static final int FIRST_LAUNCH_GROUP_INDEX = 1;
     private static final int FIRST_LAUNCH_CHANNEL_INDEX = 0;
     private static final long CHANNEL_BAR_TIMEOUT_MS = 3000L;
@@ -126,6 +126,7 @@ public final class MainActivity extends Activity {
     private ChannelListAdapter channelAdapter;
     private LiveUrlResolver liveUrlResolver;
     private MgtvLiveResolver mgtvLiveResolver;
+    private JstvLiveResolver jstvLiveResolver;
     private YangshipinWebResolver yangshipinResolver;
     private DirectVideoView videoView;
     private Surface videoSurface;
@@ -155,7 +156,6 @@ public final class MainActivity extends Activity {
     private boolean bufferingStatusVisible;
     private boolean playbackProgressObserved;
     private int stallRecoveryRequestId = -1;
-    private AutoUpdater autoUpdater;
     private QrCodeView managementQr;
     private View managementPanel;
     private View backPrompt;
@@ -184,6 +184,7 @@ public final class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         applySystemUiVisibility();
         setContentView(R.layout.activity_main);
+        ChannelCatalog.initialize(this);
 
         root = findViewById(R.id.root);
         channelBar = findViewById(R.id.channel_bar);
@@ -214,6 +215,7 @@ public final class MainActivity extends Activity {
         liveUrlResolver = new LiveUrlResolver(getSharedPreferences("live_url_resolver", MODE_PRIVATE));
         mgtvLiveResolver = new MgtvLiveResolver(
                 getSharedPreferences("mgtv_live_resolver", MODE_PRIVATE));
+        jstvLiveResolver = new JstvLiveResolver();
         yangshipinResolver = new YangshipinWebResolver(this, (FrameLayout) root,
                 getIntent().getBooleanExtra("cmg_keep_web_trace", false));
         groupList.setAdapter(groupAdapter);
@@ -279,8 +281,6 @@ public final class MainActivity extends Activity {
             }
         });
         root.requestFocus();
-        autoUpdater = new AutoUpdater(this);
-        autoUpdater.checkForUpdates();
         maybeProbeCmgRuntime();
         if (getIntent().hasExtra("cmg_compare")) {
             return;
@@ -937,6 +937,12 @@ public final class MainActivity extends Activity {
             resolveMgtvUrl(channel, requestId);
             return;
         }
+        if (group.source == ChannelCatalog.SOURCE_JSTV) {
+            Log.i("CHANNEL_TEST", "SOURCE_JSTV start name=" + channel.name
+                    + " requestId=" + requestId);
+            resolveJstvUrl(channel, requestId);
+            return;
+        }
         if (group.source == ChannelCatalog.SOURCE_WEBVIEW) {
             startWebPlayer(channel, channel.webUrl);
             return;
@@ -1392,6 +1398,46 @@ public final class MainActivity extends Activity {
                 }
             }
         }, "mgtv-live-resolve").start();
+    }
+
+    private void resolveJstvUrl(final Channel channel, final int requestId) {
+        updateLoadingStatus("正在获取江苏广电线路");
+        showChannelBar(channel.name, "正在解析江苏广电源");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final String streamUrl = jstvLiveResolver.resolve(channel);
+                    Log.i("CHANNEL_TEST", "JSTV resolve success name=" + channel.name
+                            + " requestId=" + requestId);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (requestId != playRequestId) {
+                                return;
+                            }
+                            startResolvedPlayer(channel, streamUrl);
+                        }
+                    });
+                } catch (final IOException error) {
+                    Log.w("CHANNEL_TEST", "JSTV resolve failed name=" + channel.name
+                            + " requestId=" + requestId
+                            + " error=" + error.getMessage(), error);
+                    Log.w(TAG, "JSTV resolve failed for " + channel.name, error);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (requestId != playRequestId) {
+                                return;
+                            }
+                            hideLoading();
+                            showChannelBar(channel.name,
+                                    "江苏广电源解析失败: " + error.getMessage());
+                        }
+                    });
+                }
+            }
+        }, "jstv-live-resolve").start();
     }
 
     private void startResolvedPlayer(Channel channel, String streamUrl) {
@@ -2143,9 +2189,6 @@ public final class MainActivity extends Activity {
             backPrompt.removeCallbacks(hideBackPrompt);
         }
         clearNumericChannelInput();
-        if (autoUpdater != null) {
-            autoUpdater.destroy();
-        }
         if (controlServer != null) {
             controlServer.close();
             controlServer = null;

@@ -1,6 +1,6 @@
 # 星视TV项目总结
 
-更新时间：2026-08-23
+更新时间：2026-08-24
 
 ## 一、项目定位
 
@@ -29,6 +29,8 @@
 - 保留 IJK 播放器、HlsProxyServer、央视频/央视网相关原生解析链路。
 - 新增 `SOURCE_WEBVIEW = 5`，用于 WebView 网页直播备用播放。
 - `SOURCE_MGTV = 4` 仍走 `MgtvLiveResolver` + 原生播放器链路。
+- 新增 `SOURCE_JSTV = 6`，用于江苏广电 JSTV 原生直播解析。
+- 频道组和频道列表已迁移到 `app/src/main/assets/channel_catalog.json`，新增已有 sourceType 下的频道时优先只改配置。
 
 ### WebView直播
 
@@ -57,6 +59,51 @@
 - 金鹰卡通
 - 金鹰纪实
 - 湖南电影
+
+当前原生 JSTV 江苏地方频道：31 个稳定频道。
+
+- 江苏卫视
+- 江苏城市
+- 江苏公共新闻
+- 江苏综艺
+- 江苏影视
+- 江苏体育休闲
+- 江苏教育
+- 江苏国际
+- 优漫卡通
+- 江苏卫视4K超高清
+- 南京新闻综合
+- 无锡新闻综合
+- 常州新闻综合
+- 南通新闻综合
+- 连云港新闻综合
+- 徐州-1
+- 盐城1套
+- 淮安综合
+- 宿迁综合
+- 泰州新闻综合
+- 泰兴综合
+- 宜兴新闻综合
+- 洪泽1套
+- 贾汪新闻综合
+- 邳州综合
+- 泗阳综合
+- 铜山新闻综合
+- 响水综合
+- 兴化新闻综合
+- 新沂新闻综合
+- 盱眙综合
+
+当前配置化统计：
+
+- 内置频道组：6 个
+- 内置频道总数：125 个
+- 央视网频道：20 个
+- 央视频央视频道：27 个
+- 央视频卫视频道：33 个
+- 湖南 MGTV 原生频道：6 个
+- 江苏 JSTV 原生频道：31 个
+- WebView 备用频道：8 个
 
 ### 全屏
 
@@ -106,17 +153,32 @@
 
 - `app/src/main/java/com/xingshi/tv/MainActivity.java`
   - 接入 `SOURCE_WEBVIEW`。
+  - 接入 `SOURCE_JSTV`，通过 `JstvLiveResolver` 解析签名 m3u8 后复用原生播放链。
   - 传递 `webUrl / webExtra / fullscreenType / managementUrl` 到 `WebPlayerActivity`。
   - 保留原生播放、MGTV Resolver、央视频/央视网解析流程。
 
 - `app/src/main/java/com/xingshi/tv/Channel.java`
   - 增加 `webUrl`、`webExtra`、`fullscreenType` 字段。
+  - 增加 `jstvChannelId`、`jstvEn`、`jstvStreamName`、`jstvPath` 字段。
   - 保留原有 `url / urls / streamId / yangshipin / mgtv` 字段。
 
 - `app/src/main/java/com/xingshi/tv/ChannelCatalog.java`
-  - 增加 `SOURCE_WEBVIEW`。
-  - 增加 `FULLSCREEN_MGTV`、`FULLSCREEN_YANGSHIPIN`。
-  - 增加湖南地方频道和 WebView 备用频道配置。
+  - 频道配置加载器。
+  - 保留 `SOURCE_WEBVIEW`、`SOURCE_JSTV`、`FULLSCREEN_MGTV`、`FULLSCREEN_YANGSHIPIN` 等常量。
+  - 从 `assets/channel_catalog.json` 读取内置频道组和频道列表。
+  - 配置读取失败时回退到最小 CCTV fallback，避免 App 直接崩溃。
+  - 新增已有 sourceType 的普通频道时不应修改此文件。
+
+- `app/src/main/assets/channel_catalog.json`
+  - 内置频道组和频道配置。
+  - 当前迁移 6 个频道组、125 个频道。
+  - JSON 只保存频道数据和播放参数，不保存 Resolver 签名算法或解析规则。
+
+- `app/src/main/java/com/xingshi/tv/JstvLiveResolver.java`
+  - JSTV 江苏广电原生 m3u8 解析。
+  - 根据 `streamName` 生成 `txTime / txSecret` 签名 URL。
+  - 支持 `applive/`、`live/`、`4klive/` 等不同频道 path。
+  - 每次切台重新生成签名，不做长时间缓存。
 
 - `app/src/main/res/raw/control.html`
   - 直播源管理页面。
@@ -137,8 +199,8 @@
 - `app/build.gradle`
   - `applicationId 'com.xingshi.tv'`
   - `targetSdkVersion 28`
-  - `versionCode 4`
-  - `versionName '1.3.0'`
+  - `versionCode 5`
+  - `versionName '1.1.0'`
 
 ## 五、当前稳定版本状态
 
@@ -162,7 +224,7 @@
 - WebView JS 视频检测和 MGTV `webExtra` 自动选台逻辑
 - WebView 播放时频道菜单触摸拦截逻辑
 - WebView overlay 层级
-- HlsProxyServer、MgtvLiveResolver、IJK 播放器链路
+- HlsProxyServer、MgtvLiveResolver、JstvLiveResolver、IJK 播放器链路
 
 如果必须修改，应先保留当前 APK 和日志基准，逐项验证：
 
@@ -176,7 +238,16 @@
 ## 七、后续规划
 
 - WebView 启动加载页继续优化：视觉样式、频道LOGO、动画、异常状态提示。
-- 扩展更多网页直播频道：CCTV网页源、地方卫视网页源、其他地方台。
+- 扩展更多原生 Resolver 和网页直播频道：CCTV网页源、地方卫视网页源、其他地方台。
 - 继续优化 UI 成品感：频道菜单、管理页、加载页、退出提示。
 - 版本发布整理：签名、版本号、发布包命名、变更记录。
 - 管理页蒙层问题暂缓，后续如继续处理，建议从独立 Activity / Window 背景 / 模拟器 WebView 渲染差异方向排查。
+
+## 八、新增频道规则
+
+以后新增频道时：
+
+1. 先判断属于已有 sourceType 还是新平台。
+2. 如果属于已有 sourceType，只修改 `app/src/main/assets/channel_catalog.json`。
+3. 只有新平台需要新解析逻辑时，才新增 SOURCE 和 Resolver。
+4. 不再在 Java 中硬编码普通频道列表。

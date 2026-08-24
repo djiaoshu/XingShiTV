@@ -52,7 +52,7 @@
   <section><h2>选择频道</h2><div class="grid"><select id="groups" onchange="renderChannels()"></select><select id="channels"></select></div><button class="primary wide" style="margin-top:10px" onclick="playSelected()">切换到此频道</button></section>
   <section><div class="switch"><div><h2 style="margin-bottom:4px">反转上下键</h2><div class="hint">开启后，遥控器上键切到下一频道，下键切到上一频道。</div></div><input id="reverse" type="checkbox" onchange="saveReverse()"></div></section>
   <section><h2>直播源管理</h2><div class="field"><label for="playlist">M3U / M3U8 / TXT 列表地址</label><input id="playlist" type="url" inputmode="url" placeholder="https://example.com/channels.m3u"></div><div class="actions"><button onclick="useRecommended()">使用内置推荐源</button><button class="primary" onclick="savePlaylist()">保存并加载</button></div><p class="hint">留空保存可移除在线频道。下载和解析可能需要十几秒，请保持此页面打开。</p></section>
-  <section><h2>关于星视TV</h2><p class="hint">本项目基于开源项目 NativeWasmTv 二次开发。</p><p class="hint">原项目：</p><a id="repo" class="repo" href="https://github.com/buhanzhe/NativeWasmTv" rel="noopener">https://github.com/buhanzhe/NativeWasmTv</a><p class="hint">感谢原作者开源分享。</p></section>
+  <section><h2>关于星视TV</h2><p class="hint">项目主页</p><a id="repo" class="repo" href="https://github.com/djiaoshu/XingShiTV" rel="noopener">https://github.com/djiaoshu/XingShiTV</a><p class="hint">欢迎访问项目主页获取最新版本、查看更新说明，或提交问题与建议。</p><p class="hint">本项目基于开源项目 NativeWasmTv 二次开发。</p><p class="hint">原项目：</p><a class="repo" href="https://github.com/buhanzhe/NativeWasmTv" rel="noopener">https://github.com/buhanzhe/NativeWasmTv</a><p class="hint">感谢原作者开源分享。</p></section>
 </main><div id="message" class="message"></div>
 <script>
 var state=null,recommended='',timer=null;
