@@ -115,6 +115,7 @@ public final class WebPlayerActivity extends Activity {
                     + "var url=String(location.href||'').toLowerCase();"
                     + "if(url.indexOf('mgtv.com')>=0){return 'mgtv';}"
                     + "if(url.indexOf('yangshipin.cn')>=0){return 'yangshipin';}"
+                    + "if(url.indexOf('gdtv.cn')>=0){return 'gdtv';}"
                     + "return 'generic';"
                     + "}"
                     + "function scanFullscreenDetector(){"
@@ -208,6 +209,42 @@ public final class WebPlayerActivity extends Activity {
                     + "window.main.realTouchPlayer(x,y,window.innerWidth,window.innerHeight,detectorClass(target));"
                     + "}catch(e){console.log('WEBVIEW_TEST real touch player failed '+e);}"
                     + "}"
+                    + "function triggerNativeTouchFullscreenButton(target){"
+                    + "try{"
+                    + "var rect=target.getBoundingClientRect();"
+                    + "var x=rect.left+rect.width/2;"
+                    + "var y=rect.top+rect.height/2;"
+                    + "console.log('WEBVIEW_TEST gdtv fullscreen button class='+detectorClass(target)"
+                    + "+' rect='+detectorRect(target));"
+                    + "window.main.realTouchFullscreenButton(x,y,window.innerWidth,window.innerHeight,detectorClass(target));"
+                    + "}catch(e){console.log('WEBVIEW_TEST real touch fullscreen button failed '+e);}"
+                    + "}"
+                    + "function findGdtvFullscreenButton(){"
+                    + "var elements=document.getElementsByTagName('*');"
+                    + "for(var i=0;i<elements.length;i++){"
+                    + "var cls=detectorClass(elements[i]);"
+                    + "if(cls.indexOf('prism-fullscreen-btn')>=0&&isVisible(elements[i])){return elements[i];}"
+                    + "}"
+                    + "return null;"
+                    + "}"
+                    + "function scheduleGdtvFullscreenButton(){"
+                    + "if(window.__gdtvFullscreenTriggered){return;}"
+                    + "window.__gdtvFullscreenTriggered=true;"
+                    + "var attempts=0;"
+                    + "var timer=setInterval(function(){"
+                    + "attempts++;"
+                    + "var target=findGdtvFullscreenButton();"
+                    + "if(target){"
+                    + "clearInterval(timer);"
+                    + "triggerNativeTouchFullscreenButton(target);"
+                    + "return;"
+                    + "}"
+                    + "if(attempts>=20){"
+                    + "clearInterval(timer);"
+                    + "console.log('WEBVIEW_TEST gdtv fullscreen button not found');"
+                    + "}"
+                    + "},500);"
+                    + "}"
                     + "function scheduleMgtvRealTouchPlayer(){"
                     + "if(window.__mgtvFullscreenTriggered){return;}"
                     + "window.__mgtvFullscreenTriggered=true;"
@@ -279,6 +316,7 @@ public final class WebPlayerActivity extends Activity {
                     + "console.log('WEBVIEW_TEST fullscreen strategy='+strategy+' url='+location.href);"
                     + "if(strategy==='mgtv'){scheduleMgtvRealTouchPlayer();return;}"
                     + "if(strategy==='yangshipin'){scheduleYangshipinStablePlayback(video);return;}"
+                    + "if(strategy==='gdtv'){scheduleGdtvFullscreenButton();return;}"
                     + "scanVisiblePlayerDom('generic');"
                     + "}"
                     + "function setup(video){"
@@ -353,6 +391,8 @@ public final class WebPlayerActivity extends Activity {
     private int currentChannelIndex;
     private int browsingGroupIndex;
     private int loadingProgressValue;
+    private boolean gdtvFullscreenChanged;
+    private boolean gdtvFullscreenPlaying;
     private long lastBackPressedAt;
     private final SimpleDateFormat clockFormat =
             new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
@@ -549,6 +589,9 @@ public final class WebPlayerActivity extends Activity {
                     return;
                 }
                 loadingOverlay.setVisibility(View.VISIBLE);
+                if (isGdtvWebPlayer()) {
+                    loadingOverlay.bringToFront();
+                }
                 if (loadingProgress != null) {
                     loadingProgress.setProgress(progress);
                 }
@@ -560,6 +603,9 @@ public final class WebPlayerActivity extends Activity {
                 }
                 Log.i(TAG, "loading progress=" + progress + " status=" + status);
                 if (progress >= 100) {
+                    if (isGdtvWebPlayer()) {
+                        return;
+                    }
                     loadingOverlay.postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -574,6 +620,17 @@ public final class WebPlayerActivity extends Activity {
     }
 
     private void handleWebConsoleProgress(String message) {
+        if (isGdtvWebPlayer()) {
+            if (message.contains("fullscreenchange [object HTMLDivElement]")) {
+                gdtvFullscreenChanged = true;
+                Log.i(TAG, "GDTV fullscreenchange ready");
+                tryHideGdtvFullscreenLoading();
+            } else if (message.contains("video playing") && customView != null) {
+                gdtvFullscreenPlaying = true;
+                Log.i(TAG, "GDTV fullscreen video playing ready");
+                tryHideGdtvFullscreenLoading();
+            }
+        }
         if (message.contains("found video")) {
             updateLoadingProgress(70, "找到播放器");
         } else if (message.contains("video playing")) {
@@ -748,6 +805,10 @@ public final class WebPlayerActivity extends Activity {
         finish();
     }
 
+    private boolean isGdtvWebPlayer() {
+        return fullscreenType != null && "GDTV".equalsIgnoreCase(fullscreenType);
+    }
+
     private void handleBackPressed() {
         if (channelListPanel.getVisibility() == View.VISIBLE) {
             closeChannelList();
@@ -903,6 +964,10 @@ public final class WebPlayerActivity extends Activity {
         }
         customView = view;
         customViewCallback = callback;
+        if (isGdtvWebPlayer()) {
+            gdtvFullscreenChanged = false;
+            gdtvFullscreenPlaying = false;
+        }
         customViewContainer.setVisibility(View.VISIBLE);
         customViewContainer.bringToFront();
         customViewContainer.addView(customView, new FrameLayout.LayoutParams(
@@ -912,6 +977,15 @@ public final class WebPlayerActivity extends Activity {
         enterFullscreen();
         Log.i(TAG, "fullscreen entered");
         updateLoadingProgress(100, "进入全屏");
+    }
+
+    private void tryHideGdtvFullscreenLoading() {
+        if (!isGdtvWebPlayer() || loadingOverlay == null || customView == null
+                || !gdtvFullscreenChanged || !gdtvFullscreenPlaying) {
+            return;
+        }
+        Log.i(TAG, "GDTV fullscreen conditions met, hide loading");
+        loadingOverlay.setVisibility(View.GONE);
     }
 
     private void injectMgtvExtraScript(String url) {
@@ -1099,6 +1173,8 @@ public final class WebPlayerActivity extends Activity {
             customViewCallback.onCustomViewHidden();
             customViewCallback = null;
         }
+        gdtvFullscreenChanged = false;
+        gdtvFullscreenPlaying = false;
         enterFullscreen();
     }
 
@@ -1112,6 +1188,18 @@ public final class WebPlayerActivity extends Activity {
         int keyCode = event.getKeyCode();
         if (isBackPromptVisible()) {
             return handleBackPromptKey(keyCode, event);
+        }
+        if (customView != null && keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                if (isGdtvWebPlayer()) {
+                    Log.i(TAG, "GDTV back pressed in customView, show back prompt");
+                    showBackPrompt();
+                } else {
+                    Log.i(TAG, "back pressed in customView, hide fullscreen");
+                    hideCustomView();
+                }
+            }
+            return true;
         }
         if (event.getAction() == KeyEvent.ACTION_UP
                 && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
@@ -1207,6 +1295,16 @@ public final class WebPlayerActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (customView != null) {
+                if (isGdtvWebPlayer()) {
+                    Log.i(TAG, "onKeyDown GDTV back in customView, show back prompt");
+                    showBackPrompt();
+                } else {
+                    Log.i(TAG, "onKeyDown back in customView, hide fullscreen");
+                    hideCustomView();
+                }
+                return true;
+            }
             handleBackPressed();
             return true;
         }

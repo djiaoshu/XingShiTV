@@ -44,6 +44,11 @@
             android:exported="false"
             android:hardwareAccelerated="true"
             android:screenOrientation="landscape" />
+
+        <activity
+            android:name=".KankanewsNetworkProbeActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme" />
     </application>
 </manifest>
 

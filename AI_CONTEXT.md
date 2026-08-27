@@ -14,12 +14,12 @@
 - 当前包名 / applicationId：`com.xingshi.tv`
 - App名称：星视TV
 - targetSdk：28
-- versionCode：5
-- versionName：1.1.0
+- versionCode：6
+- versionName：1.2.0
 
 ## 构建环境
 
-- JDK8：`<jdk8-path>`
+- JDK8：`<jdk8-path>`，仅用于星视TV / NativeWasmTv 老工程编译。
 - Gradle：4.4
 - Android Gradle Plugin：3.1.4
 - Android SDK：`<android-sdk-path>`
@@ -28,7 +28,120 @@
   - `build-tools;27.0.3`
   - `platform-tools`
 
-注意：旧 Gradle / AGP 在包含非 ASCII 字符的路径下可能出现编码或 R.java 相关问题。此前稳定做法是复制到 ASCII 临时目录编译，再把 APK 拷回发布目录。
+### 本地编译规则
+
+项目已提供本地调试编译脚本：
+
+```powershell
+.\build-debug.ps1
+```
+
+以后需要编译 debug APK 时，优先使用该脚本，不要重新搜索 JDK、不要修改系统默认 Java、不要反复尝试 Gradle 缓存路径。
+
+本机真实路径写入 Git 忽略文件：
+
+- `build-local.properties`
+- `local.properties`
+
+仓库只提交：
+
+- `build-debug.ps1`
+- `build-local.properties.example`
+- `local.properties.example`
+
+`build-local.properties` 字段：
+
+```properties
+jdk8.dir=<jdk8-path>
+android.sdk.dir=<android-sdk-path>
+```
+
+说明：
+
+- `jdk8.dir` 指向本机 JDK8。不要使用系统默认 JDK17 编译本项目。
+- `android.sdk.dir` 指向最小 Android SDK，需包含 `platforms;android-27`、`build-tools;27.0.3`、`platform-tools`。
+- 当前工作区已迁移到纯英文路径，编译应直接在真实源码目录执行，不再使用 `subst`、junction 或 `ascii.build.root` 等兼容方案。
+- 脚本会按 `android.sdk.dir` 自动生成/更新被忽略的 `local.properties`。
+- 脚本会临时设置 `JAVA_HOME`、`GRADLE_USER_HOME`、`JAVA_TOOL_OPTIONS`，不修改系统永久 Java 环境。
+
+## Project Filesystem Boundary
+
+后续星视TV所有任务默认文件系统操作范围不得超过：
+
+- `<workspace-root>`，对应当前工作区 `D:\Projects\SoftwareAnalysis`
+
+未经用户当前任务明确授权，不得在该目录之外创建、修改、移动或删除任何文件/目录，也不得为了编译复制项目到 `D:\` 根目录或其他外部目录。
+
+星视TV项目禁止使用 `subst` 创建 `X:`、`Y:`、`Z:` 或其他临时盘符。编译、ADB、日志和直播源测试必须直接使用项目边界内路径。任何需要临时路径的流程都必须在 `D:\Projects\SoftwareAnalysis` 内完成；如果无法在不使用临时盘符且不越过项目边界的前提下完成，必须先说明技术原因并等待用户决定。
+
+如果确实必须操作边界之外的文件，必须先说明：
+
+1. 具体路径
+2. 操作用途
+3. 必要原因
+
+并等待用户确认后再执行。
+
+网络访问不受此文件系统边界限制；但下载、抓包、分析产生的文件必须保存到项目 `tests` 体系内，例如：
+
+- `<workspace-root>/tests/live-source/<site>`
+- `<workspace-root>/tests/apk`
+
+不得将网络分析产物散落到工作区根目录或边界之外。
+
+## 目录管理规范
+
+当前唯一正式维护源码目录：
+
+- `<project-root>`
+
+工作区固定目录：
+
+- `<workspace-root>/source/NativeWasmTv-1.3.0`：正式源码，只在这里修改星视TV代码。
+- `<workspace-root>/releases/vX.X.X`：正式 GitHub Release APK 和发布说明本地归档。
+- `<workspace-root>/tests/apk`：临时真机测试 APK。
+- `<workspace-root>/tests/build-temp`：历史构建临时目录，仅用于清理旧资料；当前编译不再依赖该目录。
+- `<workspace-root>/tests/live-source/<site>`：原始直播源分析数据、抓包 JSON、CSV、临时脚本和稳定性日志。
+- `<project-root>/docs/live-source-analysis`：长期技术总结和可复用分析方法。
+- `<workspace-root>/archive`：不确定是否仍有价值但不应留在工作根目录的历史材料。
+
+以后必须遵守：
+
+1. 正式源码修改只进入 `<project-root>`。
+2. Debug APK 默认保留在 Gradle 输出目录；需要拷出测试时放入 `<workspace-root>/tests/apk`。
+3. 正式 Release APK 只归档到 `<workspace-root>/releases/vX.X.X`。
+4. 原始直播源分析资料只放 `<workspace-root>/tests/live-source/<site>`，不要提交到 Git。
+5. 长期可复用技术总结才放 `<project-root>/docs/live-source-analysis`。
+6. 禁止在 `<workspace-root>` 根目录乱放 APK、M3U、HTML、JS、JSON、CSV、日志或临时抓包文件。
+7. 禁止永久创建阶段性 `XingShiTV*Build` 工程副本。
+8. 临时构建目录由 `build-debug.ps1` 管理，用完应清理。
+9. 本机真实路径只写入被 Git ignore 的本地配置，不写入 README、AI_CONTEXT、PROJECT_SUMMARY 或 GitHub Release。
+
+### 夜神日志调试入口
+
+项目内固定夜神 / logcat 调试入口：
+
+```powershell
+.\tools\monitor-nox-log.ps1
+```
+
+Kankanews 上海频道诊断模式：
+
+```powershell
+.\tools\monitor-nox-log.ps1 -Mode Kankanews
+```
+
+双击入口：
+
+```text
+tools\monitor-nox-log.bat
+```
+
+日志统一保存到：
+
+- `<workspace-root>/tests/logs`
+
+以后不要再临时创建散落的 adb / logcat / 夜神抓日志脚本，也不要把日志写到 `D:\` 根目录或源码根目录。`tests/logs/` 已加入 Git ignore，不提交实际 logcat 文件。
 
 ## 当前稳定版本
 
@@ -77,6 +190,7 @@
 - `SOURCE_MGTV = 4`
 - `SOURCE_WEBVIEW = 5`
 - `SOURCE_JSTV = 6`
+- `SOURCE_KANKANEWS = 7`
 
 `SOURCE_WEBVIEW` 是新增网页播放备用类型，只影响 WebView 播放，不应影响其他 source。
 
@@ -93,6 +207,8 @@
 - `jstvEn`
 - `jstvStreamName`
 - `jstvPath`
+- `kankanewsChannelId`
+- `kankanewsStreamName`
 - `webUrl`
 - `webExtra`
 - `fullscreenType`
@@ -152,17 +268,21 @@ WebView 频道使用：
 - `央视频 · 卫视频道`
 - `湖南地方频道`
 - `江苏地方频道`
+- `上海频道`
+- `广东频道`
 - `网页播放备用`
 
 当前配置迁移结果：
 
-- 内置频道组：6 个
-- 内置频道总数：125 个
+- 内置频道组：8 个
+- 内置频道总数：147 个
 - 央视网频道：20 个
 - 央视频央视频道：27 个
 - 央视频卫视频道：33 个
 - 湖南 MGTV 原生频道：6 个
 - 江苏 JSTV 原生频道：31 个
+- 上海看看新闻原生频道：5 个
+- 广东 GDtV WebView 频道：17 个
 - WebView 备用频道：8 个
 
 新增已有 `sourceType` 下的普通频道时，应优先只修改 `channel_catalog.json`，不再修改 `MainActivity`、Resolver 或 IJK 播放链路。
@@ -230,6 +350,35 @@ JSTV 频道配置支持不同相对 path：
 
 签名算法保持不变：`txSecret = md5(secret + streamName + txTime)`。JSON 中的 `stream` 用于签名，`path` 会写入 `Channel.jstvPath` 用于拼接播放 URL，Resolver 不再猜测固定 `/applive/` 路径。
 
+JSTV `txTime` 依赖设备本地时间。2026-08-25 曾出现夜神/设备时间比主机慢约 3.5 小时，导致原 180 秒有效期余量生成的 JSTV 签名 URL 立即过期，31 个江苏频道全部 playlist HTTP 403，IJK 显示 `-10000/0`。已将 JSTV 专用 `txTime` 余量调大到 24 小时，并让 `JstvLiveResolver` 与 `HlsProxyServer` 的 JSTV 请求复用同一个 PC User-Agent 常量。以后遇到“江苏全频道 403 / -10000”，优先检查设备时间和 JSTV `txTime`，不要先改 IJK 或公共代理逻辑。
+
+### 上海频道，SOURCE_KANKANEWS
+
+原生 Kankanews Resolver 当前候选频道数量：5 个。
+
+频道：
+
+- 东方卫视
+- 第一财经
+- 都市频道
+- 魔都眼
+- 新纪实
+
+播放链路：
+
+`看看新闻频道 -> KankanewsLiveResolver -> 21位 nanoid M-Uuid -> KAPI签名 -> RSA分段解密 live_address -> 鉴权m3u8 -> HlsProxyServer -> IJK`
+
+关键注意：
+
+- 不要优先改成 `SOURCE_WEBVIEW`。
+- `M-Uuid` 必须是前端风格 21 位 nanoid，否则 API 可能返回 m3u8，但 CDN playlist/分片会 403。
+- KAPI `nonce` 必须是 8 位 `a-z0-9` 小写字母数字。不要复用 nanoid 完整字符集；错误 nonce 可能仍返回 `KAPI 200 / code=1000 / RSA解密成功`，但 CDN playlist 会 403。
+- Resolver 获取播放地址和 HlsProxyServer 请求 playlist/TS 必须使用同一 PC User-Agent，否则 `ua_hash` 可能不匹配。
+- HlsProxyServer 只为 `kksmg.com/kankanews.com` 增加独立 Referer / User-Agent 请求头，不应影响 CCTV、央视频、MGTV、JSTV。
+- 新闻综合网页端当前存在版权受限提示，哈哈炫动存在时段版权屏蔽风险，暂不进入正式内置配置。
+- 2026-08-25 已完成真机正式播放验证：东方卫视、第一财经、都市频道、魔都眼、新纪实均通过 `Resolver -> HlsProxyServer -> IJK`，60 到 90 秒播放正常，并完成 `东方卫视 -> 第一财经 -> 都市频道 -> 魔都眼 -> 新纪实 -> 东方卫视` 切台验证。
+- 完整分析过程见 `docs/live-source-analysis/KANKANEWS_ANALYSIS.md`。
+
 ### 配置文件结构
 
 `channel_catalog.json` 顶层结构：
@@ -259,6 +408,7 @@ JSTV 频道配置支持不同相对 path：
 - `YSP_CCTV / YSP_SATELLITE`：`yangshipinPid / yangshipinStreamId`
 - `MGTV`：`activityId / cameraId`
 - `JSTV`：`channelId / en / stream / path`
+- `KANKANEWS`：`channelId / stream`
 - `WEBVIEW`：`webUrl / webExtra / fullscreenType`
 
 JSON 只保存频道数据和播放参数，不保存签名算法、鉴权算法或解析规则。
@@ -326,7 +476,7 @@ WebView 频道：
 
 - `app/src/main/assets/channel_catalog.json`
   - 内置频道组和频道配置。
-  - 当前迁移 6 个内置频道组、125 个内置频道。
+  - 当前迁移 8 个内置频道组、147 个内置频道。
   - 以后新增已有 sourceType 下的普通频道，优先只改此文件。
 
 - `app/src/main/java/com/xingshi/tv/MgtvLiveResolver.java`
@@ -336,8 +486,13 @@ WebView 频道：
   - 原生 JSTV m3u8 签名解析。
   - 支持 JSTV 频道配置不同 path，签名算法保持不变。
 
+- `app/src/main/java/com/xingshi/tv/KankanewsLiveResolver.java`
+  - 原生看看新闻 m3u8 解析。
+  - 负责 KAPI 签名、21 位 nanoid `M-Uuid`、RSA 分段解密 `live_address`。
+  - 不保存短期 token，不打印完整签名 URL。
+
 - `app/src/main/java/com/xingshi/tv/HlsProxyServer.java`
-  - HLS 代理。曾处理过 MGTV CDN 302/403 相关调试，并为 JSTV 增加独立 Referer / User-Agent 请求头。
+  - HLS 代理。曾处理过 MGTV CDN 302/403 相关调试，并为 JSTV、Kankanews 增加独立 Referer / User-Agent 请求头。
 
 - `app/src/main/res/raw/control.html`
   - 直播源管理页面。
@@ -378,6 +533,11 @@ WebView 频道：
 
 目的：以后用户只需要提供一个直播页面 URL，例如 `https://example.com/live/`，Codex 就应该自动按照下面的流程分析，不需要用户再次说明应该采用哪种播放方式。
 
+### 已归档参考案例
+
+- 看看新闻 `https://live.kankanews.com/huikan`：完整记录了从 Nuxt/Vue 页面分析、KAPI 签名、RSA 分段解密，到 HLS 403 排查并定位 `M-Uuid`/UA/IP 绑定后 DIRECT 成功播放的过程。
+- 后续遇到“API 成功、m3u8 地址已解析、但 HLS/CDN 403”的直播网站，优先参考 `docs/live-source-analysis/KANKANEWS_ANALYSIS.md`。
+
 ### 一、基本原则
 
 星视TV新增直播站点时：
@@ -413,6 +573,11 @@ WebView 频道：
   - 江苏地方频道
   - `JstvLiveResolver`
   - 固定频道映射 + 签名 m3u8
+  - `HlsProxyServer` -> IJK
+- `SOURCE_KANKANEWS = 7`
+  - 上海看看新闻频道
+  - `KankanewsLiveResolver`
+  - KAPI 签名 + RSA 分段解密 + 鉴权 m3u8
   - `HlsProxyServer` -> IJK
 
 ### 三、收到新直播页面后的分析顺序
@@ -608,3 +773,23 @@ WebView 属于最后兜底方案。
 2. 如果属于已有 sourceType，只修改 `app/src/main/assets/channel_catalog.json`。
 3. 只有新平台需要新解析逻辑时，才新增 SOURCE 和 Resolver。
 4. 不再在 Java 中硬编码普通频道列表。
+
+## GDTv 当前接入状态
+
+GDTv / 广东频道正式采用 Mobile WebView 方案：`SOURCE_WEBVIEW + Mobile GDtV page + fullscreenType=GDTV`，频道地址格式为 `https://m.gdtv.cn/tvChannelDetail/{pk}`。
+
+原生 `GdtvLiveResolver -> HlsProxyServer -> IJK` 已证明技术上可行，但 GDtV m3u8 使用约 132 秒短效 token，token 过期后的重新解析和播放器恢复会造成约 5 秒可感知中断，因此暂停作为正式方案，代码仅保留为研究/备用。不要继续为 GDtV 修改公共 IJK/HLS 链路。当前正式「广东频道」组包含 17 路，明确排除南方购物。
+
+GDTv WebView 已验证：正常起播；官方网页自行维护 token，连续播放稳定；`prism-fullscreen-btn -> Native MotionEvent -> WebChromeClient.onShowCustomView()` 全屏成功；Back 键逻辑正常；广东频道正式采用 WebView。
+
+GDTv WebView 闪屏最终处理：不要采用固定延迟，也不要采用频道8的 `realTouchPlayer()` 双击方案。保持 `prism-fullscreen-btn -> Native MotionEvent -> onShowCustomView()`；`fullscreenType=GDTV` 时，在 `onShowCustomView()` 后重置 `gdtvFullscreenChanged / gdtvFullscreenPlaying`，只有同时收到 `fullscreenchange [object HTMLDivElement]`、全屏后的 `video playing` 且 `customView != null`，才隐藏 Loading Overlay。该方案已实测解决 Loading 100% 后短暂露出普通 GDtV 页面/播放器的问题。
+
+## 开发原则补充
+
+### Existing Solution First
+
+新需求或故障处理前，首先检查项目内部已经成熟、正常工作的同类实现；优先复用成熟方案，确认不能直接复用后再做最小差异适配，避免未经检查就新增第二套机制。
+
+### IJK Quick Check First
+
+新直播源首先快速判断 IJK 是否值得使用：`DIRECT playlist/segment 快检 -> Android/IJK 快速起播判断 -> 简单 Resolver 则优先 IJK -> 短效 token/复杂签名/频繁续签则尽快比较 WebView`。不要为了证明“理论上能用 IJK”进行大量无必要的深度测试。

@@ -40,8 +40,8 @@ android {
         // API 28 avoids Android 9 WebView hidden-API compatibility warnings
         // while keeping the old Gradle/compileSdk toolchain unchanged.
         targetSdkVersion 28
-        versionCode 5
-        versionName '1.1.0'
+        versionCode 6
+        versionName '1.2.0'
 
         ndk {
             abiFilters 'armeabi-v7a'

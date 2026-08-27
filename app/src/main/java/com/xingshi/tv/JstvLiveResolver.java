@@ -16,10 +16,16 @@ final class JstvLiveResolver {
     private static final String STREAM_HOST =
             "https://litchi-play-encrypted-site.jstv.com/";
     private static final String SECRET = "wrf2yJaCwC8HX3cfJz8P";
-    private static final int TX_TIME_OFFSET_SECONDS = 180;
-    private static final String USER_AGENT =
+    static final String STREAM_REFERER = "https://live.jstv.com/";
+    static final String USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
+    /*
+     * JSTV validates txTime against server time. Some TV boxes/emulators keep a
+     * drifting local clock; a 3-minute window can create immediately expired
+     * URLs and make every JSTV channel fail with playlist HTTP 403.
+     */
+    private static final int TX_TIME_OFFSET_SECONDS = 24 * 60 * 60;
 
     String resolve(Channel channel) throws IOException {
         if (channel.jstvStreamName == null || channel.jstvStreamName.length() == 0) {
@@ -82,7 +88,7 @@ final class JstvLiveResolver {
 
     private static void applyHeaders(HttpURLConnection connection) {
         connection.setRequestProperty("User-Agent", USER_AGENT);
-        connection.setRequestProperty("Referer", "https://live.jstv.com/");
+        connection.setRequestProperty("Referer", STREAM_REFERER);
         connection.setRequestProperty("Accept", "*/*");
     }
 

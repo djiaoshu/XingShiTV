@@ -32,10 +32,22 @@
       "order": 5
     },
     {
+      "id": "shanghai",
+      "name": "上海频道",
+      "sourceType": "KANKANEWS",
+      "order": 6
+    },
+    {
+      "id": "guangdong",
+      "name": "广东频道",
+      "sourceType": "WEBVIEW",
+      "order": 7
+    },
+    {
       "id": "webview",
       "name": "网页播放备用",
       "sourceType": "WEBVIEW",
-      "order": 6
+      "order": 8
     }
   ],
   "channels": [
@@ -1169,6 +1181,222 @@
       "en": "xuyi",
       "stream": "xuyi",
       "path": "live/xuyi.m3u8"
+    },
+    {
+      "groupId": "shanghai",
+      "number": "401",
+      "name": "东方卫视",
+      "sourceType": "KANKANEWS",
+      "order": 1,
+      "channelId": "1",
+      "stream": "dfws4k"
+    },
+    {
+      "groupId": "shanghai",
+      "number": "402",
+      "name": "第一财经",
+      "sourceType": "KANKANEWS",
+      "order": 2,
+      "channelId": "5",
+      "stream": "dycj"
+    },
+    {
+      "groupId": "shanghai",
+      "number": "403",
+      "name": "都市频道",
+      "sourceType": "KANKANEWS",
+      "order": 3,
+      "channelId": "4",
+      "stream": "ylpd"
+    },
+    {
+      "groupId": "shanghai",
+      "number": "404",
+      "name": "魔都眼",
+      "sourceType": "KANKANEWS",
+      "order": 4,
+      "channelId": "11",
+      "stream": "shanghaieye"
+    },
+    {
+      "groupId": "shanghai",
+      "number": "405",
+      "name": "新纪实",
+      "sourceType": "KANKANEWS",
+      "order": 5,
+      "channelId": "12",
+      "stream": "xjspd"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "501",
+      "name": "广东卫视",
+      "sourceType": "WEBVIEW",
+      "order": 1,
+      "channelId": "43",
+      "stream": "gdws",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/43",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "502",
+      "name": "广东珠江",
+      "sourceType": "WEBVIEW",
+      "order": 2,
+      "channelId": "44",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/44",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "503",
+      "name": "广东新闻",
+      "sourceType": "WEBVIEW",
+      "order": 3,
+      "channelId": "45",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/45",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "504",
+      "name": "广东民生",
+      "sourceType": "WEBVIEW",
+      "order": 4,
+      "channelId": "48",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/48",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "505",
+      "name": "广东体育",
+      "sourceType": "WEBVIEW",
+      "order": 5,
+      "channelId": "47",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/47",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "506",
+      "name": "大湾区卫视",
+      "sourceType": "WEBVIEW",
+      "order": 6,
+      "channelId": "51",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/51",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "507",
+      "name": "大湾区卫视（海外版）",
+      "sourceType": "WEBVIEW",
+      "order": 7,
+      "channelId": "46",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/46",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "508",
+      "name": "广东影视",
+      "sourceType": "WEBVIEW",
+      "order": 8,
+      "channelId": "53",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/53",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "509",
+      "name": "4K超高清",
+      "sourceType": "WEBVIEW",
+      "order": 9,
+      "channelId": "16",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/16",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "510",
+      "name": "广东少儿",
+      "sourceType": "WEBVIEW",
+      "order": 10,
+      "channelId": "54",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/54",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "511",
+      "name": "嘉佳卡通",
+      "sourceType": "WEBVIEW",
+      "order": 11,
+      "channelId": "66",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/66",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "512",
+      "name": "岭南戏曲",
+      "sourceType": "WEBVIEW",
+      "order": 12,
+      "channelId": "15",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/15",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "513",
+      "name": "广东移动",
+      "sourceType": "WEBVIEW",
+      "order": 13,
+      "channelId": "74",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/74",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "514",
+      "name": "广东台经典剧",
+      "sourceType": "WEBVIEW",
+      "order": 14,
+      "channelId": "100",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/100",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "515",
+      "name": "纪录片",
+      "sourceType": "WEBVIEW",
+      "order": 15,
+      "channelId": "94",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/94",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "516",
+      "name": "健康",
+      "sourceType": "WEBVIEW",
+      "order": 16,
+      "channelId": "99",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/99",
+      "fullscreenType": "GDTV"
+    },
+    {
+      "groupId": "guangdong",
+      "number": "517",
+      "name": "GRTN生活",
+      "sourceType": "WEBVIEW",
+      "order": 17,
+      "channelId": "102",
+      "webUrl": "https://m.gdtv.cn/tvChannelDetail/102",
+      "fullscreenType": "GDTV"
     },
     {
       "groupId": "webview",

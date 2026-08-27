@@ -1,0 +1,5 @@
+# Copy to build-local.properties and adjust for your machine.
+# build-local.properties is ignored by Git and may contain local absolute paths.
+
+jdk8.dir=<jdk8-path>
+android.sdk.dir=<android-sdk-path>

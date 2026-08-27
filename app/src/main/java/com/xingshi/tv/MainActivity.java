@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
@@ -66,6 +67,7 @@ public final class MainActivity extends Activity {
     private static final long CCTV_VIDEO_STALL_RECOVERY_MS = 8000L;
     private static final long CUSTOM_SOURCE_TIMEOUT_MS = 5000L;
     private static final long NUMERIC_CHANNEL_TIMEOUT_MS = 1200L;
+    private static final long GDTV_PROXY_MONITOR_INTERVAL_MS = 1000L;
 
     private final Runnable hideChannelBar = new Runnable() {
         @Override
@@ -127,6 +129,8 @@ public final class MainActivity extends Activity {
     private LiveUrlResolver liveUrlResolver;
     private MgtvLiveResolver mgtvLiveResolver;
     private JstvLiveResolver jstvLiveResolver;
+    private KankanewsLiveResolver kankanewsLiveResolver;
+    private GdtvLiveResolver gdtvLiveResolver;
     private YangshipinWebResolver yangshipinResolver;
     private DirectVideoView videoView;
     private Surface videoSurface;
@@ -156,6 +160,11 @@ public final class MainActivity extends Activity {
     private boolean bufferingStatusVisible;
     private boolean playbackProgressObserved;
     private int stallRecoveryRequestId = -1;
+    private int gdtvConsecutiveRefreshFailures;
+    private long gdtvInitialResolveStartedAt;
+    private long gdtvRefreshStartedAt;
+    private long gdtvRecoverStartedAt;
+    private boolean gdtvRefreshInProgress;
     private QrCodeView managementQr;
     private View managementPanel;
     private View backPrompt;
@@ -216,6 +225,8 @@ public final class MainActivity extends Activity {
         mgtvLiveResolver = new MgtvLiveResolver(
                 getSharedPreferences("mgtv_live_resolver", MODE_PRIVATE));
         jstvLiveResolver = new JstvLiveResolver();
+        kankanewsLiveResolver = new KankanewsLiveResolver(this);
+        gdtvLiveResolver = new GdtvLiveResolver(this, (FrameLayout) root);
         yangshipinResolver = new YangshipinWebResolver(this, (FrameLayout) root,
                 getIntent().getBooleanExtra("cmg_keep_web_trace", false));
         groupList.setAdapter(groupAdapter);
@@ -406,6 +417,45 @@ public final class MainActivity extends Activity {
             output.write(buffer, 0, count);
         }
         return output.toByteArray();
+    }
+
+    private static String safeStreamUrlForLog(String url) {
+        if (url == null) {
+            return "";
+        }
+        return url.replaceAll(
+                "(?i)([?&](?:token|txSecret|txTime|volcSecret|volcTime|wsSecret|wsTime|sign|auth|vsecret|jwt)=)[^&]+",
+                "$1<redacted>");
+    }
+
+    private static String hostOf(String url) {
+        try {
+            return URI.create(url).getHost();
+        } catch (RuntimeException error) {
+            return "";
+        }
+    }
+
+    private static String pathOf(String url) {
+        try {
+            return URI.create(url).getPath();
+        } catch (RuntimeException error) {
+            return "";
+        }
+    }
+
+    private static String streamType(String url) {
+        if (url == null) {
+            return "unknown";
+        }
+        String lower = url.toLowerCase(Locale.US);
+        if (lower.contains(".m3u8")) {
+            return "hls";
+        }
+        if (lower.contains(".flv")) {
+            return "flv";
+        }
+        return "unknown";
     }
 
     private void refreshManagementAddress() {
@@ -914,6 +964,9 @@ public final class MainActivity extends Activity {
         }
         final int requestId = ++playRequestId;
         playerStartRetryCount = 0;
+        if (gdtvLiveResolver != null) {
+            gdtvLiveResolver.cancel();
+        }
         releasePlayer();
         resetVideoLayout();
         showLoading(channel.name, group.source == ChannelCatalog.SOURCE_CUSTOM
@@ -941,6 +994,19 @@ public final class MainActivity extends Activity {
             Log.i("CHANNEL_TEST", "SOURCE_JSTV start name=" + channel.name
                     + " requestId=" + requestId);
             resolveJstvUrl(channel, requestId);
+            return;
+        }
+        if (group.source == ChannelCatalog.SOURCE_KANKANEWS) {
+            Log.i("CHANNEL_TEST", "SOURCE_KANKANEWS start name=" + channel.name
+                    + " requestId=" + requestId);
+            resolveKankanewsUrl(channel, requestId);
+            return;
+        }
+        if (group.source == ChannelCatalog.SOURCE_GDTV) {
+            Log.i("CHANNEL_TEST", "SOURCE_GDTV start name=" + channel.name
+                    + " requestId=" + requestId);
+            resetGdtvMetrics();
+            resolveGdtvUrl(channel, requestId, false);
             return;
         }
         if (group.source == ChannelCatalog.SOURCE_WEBVIEW) {
@@ -1440,14 +1506,140 @@ public final class MainActivity extends Activity {
         }, "jstv-live-resolve").start();
     }
 
+    private void resolveKankanewsUrl(final Channel channel, final int requestId) {
+        updateLoadingStatus("正在获取看看新闻线路");
+        showChannelBar(channel.name, "正在解析看看新闻源");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final String streamUrl = kankanewsLiveResolver.resolve(channel);
+                    Log.i("CHANNEL_TEST", "Kankanews resolve success name=" + channel.name
+                            + " requestId=" + requestId);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (requestId != playRequestId) {
+                                return;
+                            }
+                            startResolvedPlayer(channel, streamUrl);
+                        }
+                    });
+                } catch (final IOException error) {
+                    Log.w("CHANNEL_TEST", "Kankanews resolve failed name=" + channel.name
+                            + " requestId=" + requestId
+                            + " error=" + error.getMessage(), error);
+                    Log.w(TAG, "Kankanews resolve failed for " + channel.name, error);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (requestId != playRequestId) {
+                                return;
+                            }
+                            hideLoading();
+                            showChannelBar(channel.name,
+                                    "看看新闻源解析失败: " + error.getMessage());
+                        }
+                    });
+                }
+            }
+        }, "kankanews-live-resolve").start();
+    }
+
+    private void resolveGdtvUrl(final Channel channel, final int requestId,
+            final boolean refresh) {
+        if (refresh) {
+            updateLoadingStatus("正在刷新广东台线路");
+            showChannelBar(channel.name, "广东台线路已过期，正在刷新");
+        } else {
+            updateLoadingStatus("正在获取广东台线路");
+            showChannelBar(channel.name, "正在解析广东台源");
+        }
+        long now = SystemClock.elapsedRealtime();
+        if (refresh) {
+            gdtvRefreshStartedAt = now;
+            Log.i("GDTV_METRIC", "refresh resolve start channel=" + channel.name
+                    + " t=" + now);
+        } else {
+            gdtvInitialResolveStartedAt = now;
+            Log.i("GDTV_METRIC", "initial resolve request channel=" + channel.name
+                    + " t=" + now);
+        }
+        gdtvLiveResolver.resolve(channel, new GdtvLiveResolver.Callback() {
+            @Override
+            public void onSuccess(final String streamUrl, final long elapsedMs) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (requestId != playRequestId) {
+                            return;
+                        }
+                        if (refresh) {
+                            long refreshElapsed = SystemClock.elapsedRealtime()
+                                    - gdtvRefreshStartedAt;
+                            gdtvRecoverStartedAt = SystemClock.elapsedRealtime();
+                            Log.i("GDTV_METRIC", "refresh resolve success channel="
+                                    + channel.name
+                                    + " resolverElapsedMs=" + elapsedMs
+                                    + " totalResolveElapsedMs=" + refreshElapsed);
+                        } else {
+                            Log.i("GDTV_METRIC", "initial resolve completed channel="
+                                    + channel.name
+                                    + " resolverElapsedMs=" + elapsedMs);
+                        }
+                        Log.i("CHANNEL_TEST", "GDTV resolve success name=" + channel.name
+                                + " requestId=" + requestId
+                                + " refresh=" + refresh);
+                        gdtvRefreshInProgress = false;
+                        startResolvedPlayer(channel, streamUrl);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(final IOException error, final long elapsedMs) {
+                Log.w("CHANNEL_TEST", "GDTV resolve failed name=" + channel.name
+                        + " requestId=" + requestId
+                        + " refresh=" + refresh
+                        + " elapsedMs=" + elapsedMs
+                        + " error=" + error.getMessage(), error);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (requestId != playRequestId) {
+                            return;
+                        }
+                        gdtvRefreshInProgress = false;
+                        hideLoading();
+                        showChannelBar(channel.name,
+                                "广东台源解析失败: " + error.getMessage());
+                    }
+                });
+            }
+        });
+    }
+
     private void startResolvedPlayer(Channel channel, String streamUrl) {
+        boolean kankanewsSource = currentGroup().source == ChannelCatalog.SOURCE_KANKANEWS;
+        boolean gdtvSource = currentGroup().source == ChannelCatalog.SOURCE_GDTV;
         Log.i("PLAYER_TEST", "startResolvedPlayer channel="
                 + channel.name
                 + " url="
-                + streamUrl);
-        Log.i("CHANNEL_TEST", "startResolvedPlayer url=" + streamUrl
+                + safeStreamUrlForLog(streamUrl));
+        Log.i("CHANNEL_TEST", "startResolvedPlayer url=" + safeStreamUrlForLog(streamUrl)
                 + " name=" + channel.name
                 + " source=" + currentGroup().source);
+        if (kankanewsSource) {
+            Log.i("KANKAN", "before player channel=" + channel.name
+                    + " streamHost=" + hostOf(streamUrl)
+                    + " streamPath=" + pathOf(streamUrl)
+                    + " streamType=" + streamType(streamUrl));
+        }
+        if (gdtvSource) {
+            Log.i("GDTV_METRIC", "before player channel=" + channel.name
+                    + " streamHost=" + hostOf(streamUrl)
+                    + " streamPath=" + pathOf(streamUrl));
+        }
         updateLoadingStatus("正在连接视频");
         try {
             startPlayer(channel, streamUrl);
@@ -1462,6 +1654,86 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void resetGdtvMetrics() {
+        gdtvConsecutiveRefreshFailures = 0;
+        gdtvInitialResolveStartedAt = 0L;
+        gdtvRefreshStartedAt = 0L;
+        gdtvRecoverStartedAt = 0L;
+        gdtvRefreshInProgress = false;
+    }
+
+    private boolean shouldRefreshGdtvStream() {
+        if (currentGroup().source != ChannelCatalog.SOURCE_GDTV) {
+            return false;
+        }
+        if (gdtvConsecutiveRefreshFailures >= 3) {
+            Log.w("GDTV_METRIC", "refresh skipped max consecutive failures count="
+                    + gdtvConsecutiveRefreshFailures);
+            return false;
+        }
+        if (proxy == null) {
+            return !prepared;
+        }
+        int status = proxy.getLastGdtvUpstreamStatus();
+        String kind = proxy.getLastGdtvRequestKind();
+        return status == 403 || ("playlist".equals(kind) && status >= 400) || !prepared;
+    }
+
+    private void refreshGdtvStream(Channel channel, int requestId) {
+        if (requestId != playRequestId || currentGroup().source != ChannelCatalog.SOURCE_GDTV) {
+            return;
+        }
+        if (gdtvRefreshInProgress) {
+            Log.i("GDTV_METRIC", "refresh skipped already in progress channel="
+                    + channel.name);
+            return;
+        }
+        gdtvConsecutiveRefreshFailures++;
+        gdtvRefreshInProgress = true;
+        Log.i("GDTV_METRIC", "refresh start channel=" + channel.name
+                + " consecutiveFailureCount=" + gdtvConsecutiveRefreshFailures
+                + " firstPlaylistSuccessElapsedMs="
+                + (proxy == null ? -1L : proxy.getGdtvFirstPlaylistSuccessElapsedMs())
+                + " first403ElapsedMs="
+                + (proxy == null ? -1L : proxy.getGdtvFirstPlaylist403ElapsedMs()));
+        resolveGdtvUrl(channel, requestId, true);
+    }
+
+    private void scheduleGdtvProxyMonitor(final Channel channel, final int requestId,
+            final IMediaPlayer watchedPlayer) {
+        channelBar.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (requestId != playRequestId || player != watchedPlayer
+                        || currentGroup().source != ChannelCatalog.SOURCE_GDTV) {
+                    return;
+                }
+                int lastStatus = proxy == null ? -1 : proxy.getLastGdtvUpstreamStatus();
+                String lastKind = proxy == null ? "" : proxy.getLastGdtvRequestKind();
+                boolean refreshNeeded = proxy == null ? !prepared
+                        : lastStatus == 403 || ("playlist".equals(lastKind) && lastStatus >= 400)
+                        || !prepared;
+                if (!gdtvRefreshInProgress && refreshNeeded && shouldRefreshGdtvStream()) {
+                    Log.w("GDTV_METRIC", "proxy monitor triggers refresh channel="
+                            + channel.name
+                            + " lastProxyStatus=" + lastStatus
+                            + " lastProxyKind=" + lastKind
+                            + " prepared=" + prepared);
+                    refreshGdtvStream(channel, requestId);
+                    return;
+                }
+                channelBar.postDelayed(this, GDTV_PROXY_MONITOR_INTERVAL_MS);
+            }
+        }, GDTV_PROXY_MONITOR_INTERVAL_MS);
+    }
+
+    private static long elapsedSince(long startedAt) {
+        if (startedAt <= 0L) {
+            return -1L;
+        }
+        return SystemClock.elapsedRealtime() - startedAt;
+    }
+
     private void startPlayer(final Channel channel, final String streamUrl) throws IOException {
         releasePlayer();
         resetVideoLayout();
@@ -1470,6 +1742,8 @@ public final class MainActivity extends Activity {
         final IjkMediaPlayer nextPlayer = new IjkMediaPlayer();
         player = nextPlayer;
         final boolean customSource = currentGroup().source == ChannelCatalog.SOURCE_CUSTOM;
+        final boolean kankanewsSource = currentGroup().source == ChannelCatalog.SOURCE_KANKANEWS;
+        final boolean gdtvSource = currentGroup().source == ChannelCatalog.SOURCE_GDTV;
         final int sourceRequestId = playRequestId;
         boolean softwareDecode = getIntent().getBooleanExtra("debug_software_decode", false);
         nextPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "mediacodec",
@@ -1525,6 +1799,31 @@ public final class MainActivity extends Activity {
                 playbackProgressObserved = false;
                 updateVideoLayout(mediaPlayer);
                 mediaPlayer.start();
+                if (kankanewsSource) {
+                    Log.i("KANKAN", "player prepared channel=" + channel.name
+                            + " video=" + mediaPlayer.getVideoWidth()
+                            + "x" + mediaPlayer.getVideoHeight());
+                }
+                if (gdtvSource) {
+                    if (gdtvRecoverStartedAt > 0L) {
+                        Log.i("GDTV_METRIC", "recover playback prepared channel="
+                                + channel.name
+                                + " elapsedMs=" + (SystemClock.elapsedRealtime()
+                                - gdtvRecoverStartedAt)
+                                + " visibleInterruption=unknown"
+                                + " consecutiveFailureCountBeforeReset="
+                                + gdtvConsecutiveRefreshFailures);
+                        gdtvConsecutiveRefreshFailures = 0;
+                        Log.i("GDTV_METRIC", "refresh consecutive failures reset channel="
+                                + channel.name);
+                        gdtvRecoverStartedAt = 0L;
+                    } else {
+                        Log.i("GDTV_METRIC", "player prepared channel=" + channel.name
+                                + " elapsedSinceInitialResolveMs="
+                                + elapsedSince(gdtvInitialResolveStartedAt));
+                    }
+                    scheduleGdtvProxyMonitor(channel, sourceRequestId, mediaPlayer);
+                }
                 scheduleVideoInfoRefresh();
                 prefetchNearbyChannels(channel);
                 hideLoading();
@@ -1589,6 +1888,38 @@ public final class MainActivity extends Activity {
             @Override
             public boolean onError(IMediaPlayer mediaPlayer, int what, int extra) {
                 if (player == mediaPlayer) {
+                    if (kankanewsSource) {
+                        Log.e("KANKAN", "player error what=" + what
+                                + " extra=" + extra
+                                + " prepared=" + prepared
+                                + " channel=" + channel.name);
+                    }
+                    if (gdtvSource && shouldRefreshGdtvStream()) {
+                        final IMediaPlayer failedPlayer = mediaPlayer;
+                        int lastGdtvStatus = proxy == null ? -1
+                                : proxy.getLastGdtvUpstreamStatus();
+                        String lastGdtvKind = proxy == null ? ""
+                                : proxy.getLastGdtvRequestKind();
+                        Log.w("GDTV_METRIC", "player error triggers refresh channel="
+                                + channel.name
+                                + " what=" + what
+                                + " extra=" + extra
+                                + " prepared=" + prepared
+                                + " lastProxyStatus=" + lastGdtvStatus
+                                + " lastProxyKind=" + lastGdtvKind
+                                + " consecutiveFailureCount="
+                                + gdtvConsecutiveRefreshFailures);
+                        channelBar.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (sourceRequestId == playRequestId
+                                        && player == failedPlayer) {
+                                    refreshGdtvStream(channel, sourceRequestId);
+                                }
+                            }
+                        });
+                        return true;
+                    }
                     if (customSource) {
                         final IMediaPlayer failedPlayer = mediaPlayer;
                         channelBar.post(new Runnable() {
@@ -1629,7 +1960,20 @@ public final class MainActivity extends Activity {
                 return true;
             }
         });
-        nextPlayer.setDataSource(proxy.proxyUrl(streamUrl));
+        String playerUrl = proxy.proxyUrl(streamUrl);
+        if (kankanewsSource) {
+            Log.i("KANKAN", "player datasource type=local_proxy"
+                    + " proxyHost=127.0.0.1"
+                    + " originHost=" + hostOf(streamUrl)
+                    + " originType=" + streamType(streamUrl));
+        }
+        if (gdtvSource) {
+            Log.i("GDTV_METRIC", "player datasource type=local_proxy"
+                    + " proxyHost=127.0.0.1"
+                    + " originHost=" + hostOf(streamUrl)
+                    + " originType=" + streamType(streamUrl));
+        }
+        nextPlayer.setDataSource(playerUrl);
         nextPlayer.prepareAsync();
         if (customSource) {
             channelBar.postDelayed(new Runnable() {
@@ -2196,6 +2540,9 @@ public final class MainActivity extends Activity {
         releasePlayer();
         if (yangshipinResolver != null) {
             yangshipinResolver.destroy();
+        }
+        if (gdtvLiveResolver != null) {
+            gdtvLiveResolver.cancel();
         }
         if (proxy != null) {
             proxy.close();

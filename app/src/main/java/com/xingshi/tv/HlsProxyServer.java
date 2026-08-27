@@ -114,6 +114,13 @@ final class HlsProxyServer implements Closeable {
     private ServerSocket serverSocket;
     private Thread acceptThread;
     private volatile boolean running;
+    private volatile int lastGdtvUpstreamStatus;
+    private volatile String lastGdtvRequestKind = "";
+    private volatile long gdtvMetricStartedAt;
+    private volatile long gdtvFirstPlaylistSuccessAt;
+    private volatile long gdtvFirstPlaylist403At;
+    private volatile boolean gdtvFirstPlaylistSuccessLogged;
+    private volatile boolean gdtvFirstPlaylist403Logged;
     private final AtomicInteger cmgTsRequestIndex = new AtomicInteger();
     private static final AtomicInteger CMG_DUMP_INDEX = new AtomicInteger();
     private final Map<String, byte[]> cmgSegmentCache =
@@ -382,6 +389,31 @@ final class HlsProxyServer implements Closeable {
         if (!running) {
             throw new SocketException("Proxy closed");
         }
+        boolean kankanews = isKankanewsUrl(originUrl);
+        String kankanewsKind = kankanewsRequestKind(originUrl, null);
+        boolean gdtv = isGdtvUrl(originUrl);
+        if (kankanews) {
+            Log.i("KANKAN", "proxy request start kind=" + kankanewsKind
+                    + " host=" + hostOf(originUrl)
+                    + " path=" + pathOf(originUrl));
+            if (KankanewsContext.isDebugDiagnosticsEnabled()) {
+                Log.i("KANKAN_CTX", "proxy uaHash=" + KankanewsContext.getUserAgentHash()
+                        + " uuidHash=" + KankanewsContext.getClientIdHash(null)
+                        + " uuidValid=" + KankanewsContext.isCurrentClientIdValid(null)
+                        + " uuidLength=" + KankanewsContext.getClientIdLength(null)
+                        + " host=" + hostOf(originUrl)
+                        + " path=" + pathOf(originUrl));
+            }
+        }
+        if (gdtv) {
+            if (gdtvMetricStartedAt == 0L) {
+                gdtvMetricStartedAt = SystemClock.elapsedRealtime();
+            }
+            Log.i("GDTV_METRIC", "proxy request start kind="
+                    + requestKind(originUrl, null)
+                    + " host=" + hostOf(originUrl)
+                    + " path=" + pathOf(originUrl));
+        }
         if (isTransportStream(originUrl, null) && needsH5eDecrypt(originUrl)) {
             return new ProxyResponse("video/MP2T", getCctvSegment(originUrl));
         }
@@ -401,17 +433,29 @@ final class HlsProxyServer implements Closeable {
             connection.setUseCaches(false);
             applyRequestHeaders(connection, requestHeaders);
             Log.i("HLS_PROXY", "upstream request:"
-                    + " url=" + requestUrl
+                    + " url=" + safeUrlForLog(requestUrl)
                     + " host=" + hostOf(requestUrl)
-                    + " headers=" + requestHeaders);
+                    + " headers=" + safeHeadersForLog(requestHeaders));
             connection.connect();
 
             boolean responseConsumed = false;
             try {
                 int status = connection.getResponseCode();
                 String contentType = connection.getContentType();
+                if (gdtv) {
+                    recordGdtvUpstreamStatus(requestUrl, contentType, status);
+                }
+                if (kankanews) {
+                    Log.i("KANKAN", "proxy " + kankanewsRequestKind(requestUrl, contentType)
+                            + " http=" + status
+                            + " host=" + hostOf(requestUrl)
+                            + " path=" + pathOf(requestUrl)
+                            + " contentType=" + contentType
+                            + " uaMatch=" + KankanewsContext.getUserAgent().equals(
+                                    requestHeaders.get("User-Agent")));
+                }
                 Log.i("HLS_PROXY", "upstream response:"
-                        + " url=" + requestUrl
+                        + " url=" + safeUrlForLog(requestUrl)
                         + " status=" + status
                         + " contentType=" + contentType);
                 if (isRedirectStatus(status)) {
@@ -419,8 +463,8 @@ final class HlsProxyServer implements Closeable {
                     String redirectUrl = location == null
                             ? null : URI.create(requestUrl).resolve(location).toString();
                     Log.i("HLS_PROXY", "redirect:"
-                            + " from=" + requestUrl
-                            + " to=" + redirectUrl
+                            + " from=" + safeUrlForLog(requestUrl)
+                            + " to=" + safeUrlForLog(redirectUrl)
                             + " status=" + status
                             + " headers=" + requestHeaders);
                     if (location == null || location.length() == 0) {
@@ -435,9 +479,16 @@ final class HlsProxyServer implements Closeable {
                     continue;
                 }
                 if (status < 200 || status >= 300) {
+                    if (kankanews) {
+                        Log.w("KANKAN", "proxy upstream failed kind="
+                                + kankanewsRequestKind(requestUrl, contentType)
+                                + " http=" + status
+                                + " host=" + hostOf(requestUrl)
+                                + " path=" + pathOf(requestUrl));
+                    }
                     throw new IOException("Upstream HTTP " + status);
                 }
-                Log.i("HLS_PROXY", "upstream success: url=" + requestUrl
+                Log.i("HLS_PROXY", "upstream success: url=" + safeUrlForLog(requestUrl)
                         + " status=" + status);
 
                 byte[] body = readFully(connection.getInputStream(), connection.getContentLength());
@@ -446,11 +497,21 @@ final class HlsProxyServer implements Closeable {
                     throw new SocketException("Proxy closed");
                 }
                 if (isPlaylist(requestUrl, contentType)) {
+                    if (kankanews) {
+                        Log.i("KANKAN", "proxy playlist bytes=" + body.length
+                                + " host=" + hostOf(requestUrl)
+                                + " firstMedia=" + safeFirstMediaForLog(requestUrl, body));
+                    }
                     String playlist = rewritePlaylist(requestUrl, new String(body, UTF_8));
                     return new ProxyResponse("application/vnd.apple.mpegurl",
                             playlist.getBytes(UTF_8));
                 }
 
+                if (kankanews) {
+                    Log.i("KANKAN", "proxy segment bytes=" + body.length
+                            + " host=" + hostOf(requestUrl)
+                            + " path=" + pathOf(requestUrl));
+                }
                 return new ProxyResponse(contentType == null
                         ? "application/octet-stream" : contentType, body);
             } finally {
@@ -1238,6 +1299,81 @@ final class HlsProxyServer implements Closeable {
         return lowerPath.endsWith(".ts") || lowerType.contains("mp2t");
     }
 
+    private static String kankanewsRequestKind(String url, String contentType) {
+        return requestKind(url, contentType);
+    }
+
+    private static String requestKind(String url, String contentType) {
+        if (isPlaylist(url, contentType)) {
+            return "playlist";
+        }
+        String lowerPath;
+        try {
+            lowerPath = URI.create(url).getPath().toLowerCase(Locale.US);
+        } catch (IllegalArgumentException error) {
+            return "unknown";
+        }
+        if (lowerPath.endsWith(".ts") || lowerPath.endsWith(".m4s")
+                || lowerPath.endsWith(".mp4") || lowerPath.endsWith(".aac")) {
+            return "segment";
+        }
+        return "upstream";
+    }
+
+    private void recordGdtvUpstreamStatus(String url, String contentType, int status) {
+        String kind = requestKind(url, contentType);
+        lastGdtvUpstreamStatus = status;
+        lastGdtvRequestKind = kind;
+        long now = SystemClock.elapsedRealtime();
+        if (gdtvMetricStartedAt == 0L) {
+            gdtvMetricStartedAt = now;
+        }
+        if ("playlist".equals(kind) && status >= 200 && status < 300
+                && !gdtvFirstPlaylistSuccessLogged) {
+            gdtvFirstPlaylistSuccessLogged = true;
+            Log.i("GDTV_METRIC", "first playlist success elapsedMs="
+                    + (now - gdtvMetricStartedAt)
+                    + " host=" + hostOf(url)
+                    + " path=" + pathOf(url));
+            gdtvFirstPlaylistSuccessAt = now;
+        }
+        if ("playlist".equals(kind) && status == 403 && !gdtvFirstPlaylist403Logged) {
+            gdtvFirstPlaylist403Logged = true;
+            Log.w("GDTV_METRIC", "first playlist 403 elapsedMs="
+                    + (now - gdtvMetricStartedAt)
+                    + " host=" + hostOf(url)
+                    + " path=" + pathOf(url));
+            gdtvFirstPlaylist403At = now;
+        }
+        Log.i("GDTV_METRIC", "proxy " + kind
+                + " http=" + status
+                + " host=" + hostOf(url)
+                + " path=" + pathOf(url)
+                + " contentType=" + contentType);
+    }
+
+    int getLastGdtvUpstreamStatus() {
+        return lastGdtvUpstreamStatus;
+    }
+
+    String getLastGdtvRequestKind() {
+        return lastGdtvRequestKind;
+    }
+
+    long getGdtvFirstPlaylistSuccessElapsedMs() {
+        if (gdtvMetricStartedAt == 0L || gdtvFirstPlaylistSuccessAt == 0L) {
+            return -1L;
+        }
+        return gdtvFirstPlaylistSuccessAt - gdtvMetricStartedAt;
+    }
+
+    long getGdtvFirstPlaylist403ElapsedMs() {
+        if (gdtvMetricStartedAt == 0L || gdtvFirstPlaylist403At == 0L) {
+            return -1L;
+        }
+        return gdtvFirstPlaylist403At - gdtvMetricStartedAt;
+    }
+
     private static void applyRequestHeaders(HttpURLConnection connection, String url) {
         applyRequestHeaders(connection, buildRequestHeaders(url));
     }
@@ -1252,8 +1388,19 @@ final class HlsProxyServer implements Closeable {
             headers.put("User-Agent", BROWSER_USER_AGENT);
             headers.put("Referer", "https://www.mgtv.com/");
         } else if (isJstvUrl(url)) {
-            headers.put("User-Agent", BROWSER_USER_AGENT);
-            headers.put("Referer", "https://live.jstv.com/");
+            headers.put("User-Agent", JstvLiveResolver.USER_AGENT);
+            headers.put("Referer", JstvLiveResolver.STREAM_REFERER);
+        } else if (isKankanewsUrl(url)) {
+            headers.put("User-Agent", KankanewsContext.getUserAgent());
+            headers.put("M-Uuid", KankanewsContext.getCurrentClientIdForLog());
+            headers.put("Referer", KankanewsLiveResolver.STREAM_REFERER);
+        } else if (isGdtvUrl(url)) {
+            headers.put("User-Agent", GdtvLiveResolver.USER_AGENT);
+            headers.put("Referer", GdtvLiveResolver.STREAM_REFERER);
+            headers.put("sec-ch-ua", "\"Not=A?Brand\";v=\"99\", "
+                    + "\"Google Chrome\";v=\"151\", \"Chromium\";v=\"151\"");
+            headers.put("sec-ch-ua-platform", "\"Windows\"");
+            headers.put("sec-ch-ua-mobile", "?0");
         } else {
             headers.put("User-Agent", DEFAULT_USER_AGENT);
         }
@@ -1269,9 +1416,33 @@ final class HlsProxyServer implements Closeable {
         }
     }
 
+    private static Map<String, String> safeHeadersForLog(Map<String, String> headers) {
+        Map<String, String> safe = new LinkedHashMap<String, String>();
+        for (Map.Entry<String, String> header : headers.entrySet()) {
+            String key = header.getKey();
+            String value = header.getValue();
+            if ("M-Uuid".equalsIgnoreCase(key)) {
+                safe.put(key, "<redacted:"
+                        + KankanewsContext.safeHash(value)
+                        + ",len=" + (value == null ? 0 : value.length()) + ">");
+            } else {
+                safe.put(key, value);
+            }
+        }
+        return safe;
+    }
+
     private static String hostOf(String url) {
         try {
             return URI.create(url).getHost();
+        } catch (IllegalArgumentException error) {
+            return "";
+        }
+    }
+
+    private static String pathOf(String url) {
+        try {
+            return URI.create(url).getPath();
         } catch (IllegalArgumentException error) {
             return "";
         }
@@ -1298,9 +1469,42 @@ final class HlsProxyServer implements Closeable {
         return lower.contains(".jstv.com") || lower.contains("//jstv.com");
     }
 
+    private static boolean isKankanewsUrl(String url) {
+        String lower = url.toLowerCase(Locale.US);
+        return lower.contains(".kksmg.com") || lower.contains("//kksmg.com")
+                || lower.contains(".kankanews.com") || lower.contains("//kankanews.com");
+    }
+
+    private static boolean isGdtvUrl(String url) {
+        if (url == null) {
+            return false;
+        }
+        return GdtvLiveResolver.isGdtvUrl(url);
+    }
+
     private static boolean isYangshipinUrl(String url) {
         String lower = url.toLowerCase(Locale.US);
         return lower.contains("ysp.cctv.cn") || lower.contains("yangshipin.cn");
+    }
+
+    private static String safeUrlForLog(String url) {
+        if (url == null) {
+            return "";
+        }
+        return url.replaceAll("(?i)([?&](?:t_token|token|txSecret|txTime|volcSecret|volcTime|wsSecret|wsTime|sign|auth|vsecret)=)[^&]+",
+                "$1<redacted>");
+    }
+
+    private static String safeFirstMediaForLog(String playlistUrl, byte[] body) {
+        try {
+            String first = firstMediaSegment(playlistUrl, new String(body, UTF_8));
+            if (first == null) {
+                return "";
+            }
+            return hostOf(first) + pathOf(first);
+        } catch (RuntimeException error) {
+            return "";
+        }
     }
 
     private byte[] prewarmYangshipinState(String originUrl, YangshipinSegment current,

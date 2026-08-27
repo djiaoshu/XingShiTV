@@ -1,12 +1,15 @@
 # Gradle / Android build outputs
 .gradle/
+.gradle-user/
 .gradle-user-home/
+.android-build-cache/
 build/
 */build/
 captures/
 
 # Android local SDK / IDE files
 local.properties
+build-local.properties
 .android-home/
 .idea/
 *.iml
@@ -39,6 +42,9 @@ ysp-auth-*.txt
 ysp-liveinfo-*.txt
 ysp-network.txt
 *.log
+logs/
+tests/logs/
+tests/build-temp/
 
 # Temporary files
 *.tmp

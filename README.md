@@ -2,7 +2,7 @@
 
 星视TV是一款 Android TV 网络电视应用。
 
-当前版本：星视TV v1.1.0
+当前版本：星视TV v1.2.0
 
 本项目基于开源项目 NativeWasmTv 二次开发。
 
@@ -15,15 +15,26 @@
 - Android TV 遥控器操作
 - 多频道直播播放
 - 自定义直播源管理
-- CCTV / 央视频 / MGTV / JSTV 原生直播支持
+- CCTV / 央视频 / MGTV / JSTV / 看看新闻原生直播支持
 - WebView 网页直播备用播放
 - MGTV 网页直播适配
 - 央视频网页直播适配
+- GDtV 广东频道 Mobile WebView 适配
 - 自动全屏处理
 - Native WebView 播放器交互优化
 - 网页频道覆盖菜单
 - 直播源在线管理
 - 软件内提供星视TV GitHub 项目主页入口
+
+## v1.2.0 更新重点
+
+- 新增「广东频道」频道组。
+- 广东频道正式采用 GDtV Mobile WebView 播放方案。
+- 新增 17 路广东频道，排除购物频道「南方购物」。
+- GDtV 支持 `prism-fullscreen-btn -> Native MotionEvent -> WebChromeClient.onShowCustomView()` 全屏。
+- 修复进入 GDtV 全屏前短暂露出普通网页/播放器画面的闪屏问题。
+- 优化 GDtV WebView Back 键交互。
+- 保留 `GdtvLiveResolver` 作为实验/备用方案，正式频道不走原生 GDtV 方案。
 
 ## v1.1.0 更新重点
 
@@ -37,13 +48,15 @@
 
 ## 当前内置频道
 
-当前配置共 6 个频道组、125 个内置频道：
+当前配置共 8 个频道组、147 个内置频道：
 
 - CCTV：20
 - 央视频央视频道：27
 - 央视频卫视频道：33
 - 湖南 MGTV：6
 - 江苏 JSTV：31
+- 上海看看新闻：5
+- 广东 GDtV：17
 - WebView备用：8
 
 ## 技术说明
@@ -73,6 +86,13 @@ MGTV:
 
 - 稳定播放检测
 - Native 触摸模拟全屏
+
+GDtV:
+
+- Mobile WebView 播放
+- 官方网页自行维护短效 token
+- Native 触摸点击网页全屏按钮
+- CustomView 建立并确认全屏播放后释放 Loading
 
 其他技术点：
 

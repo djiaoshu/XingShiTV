@@ -23,6 +23,8 @@ final class ChannelCatalog {
     static final int SOURCE_MGTV = 4;
     static final int SOURCE_WEBVIEW = 5;
     static final int SOURCE_JSTV = 6;
+    static final int SOURCE_KANKANEWS = 7;
+    static final int SOURCE_GDTV = 8;
     static final String FULLSCREEN_MGTV = "MGTV";
     static final String FULLSCREEN_YANGSHIPIN = "YANGSHIPIN";
 
@@ -256,6 +258,10 @@ final class ChannelCatalog {
         String jstvEn = item.optString("en", null);
         String jstvStreamName = item.optString("stream", null);
         String jstvPath = item.optString("path", null);
+        String kankanewsChannelId = item.optString("channelId", null);
+        String kankanewsStreamName = item.optString("stream", null);
+        String gdtvChannelId = item.optString("channelId", null);
+        String gdtvStreamName = item.optString("stream", null);
         String webUrl = item.optString("webUrl", null);
         String webExtra = item.optString("webExtra", null);
         String fullscreenType = item.optString("fullscreenType", null);
@@ -288,6 +294,18 @@ final class ChannelCatalog {
                 return null;
             }
             streamId = "jstv_" + jstvEn;
+        } else if (source == SOURCE_KANKANEWS) {
+            if (kankanewsChannelId == null || kankanewsChannelId.length() == 0) {
+                Log.w(TAG, "Skip Kankanews channel without channelId name=" + name);
+                return null;
+            }
+            streamId = "kankanews_" + kankanewsChannelId;
+        } else if (source == SOURCE_GDTV) {
+            if (gdtvChannelId == null || gdtvChannelId.length() == 0) {
+                Log.w(TAG, "Skip GDTv channel without channelId name=" + name);
+                return null;
+            }
+            streamId = "gdtv_" + gdtvChannelId;
         } else if (source == SOURCE_WEBVIEW) {
             if (webUrl == null || webUrl.length() == 0) {
                 Log.w(TAG, "Skip WebView channel without webUrl name=" + name);
@@ -299,6 +317,8 @@ final class ChannelCatalog {
         return new Channel(number, name, streamId, url,
                 yangshipinPid, yangshipinStreamId, activityId, cameraId,
                 jstvChannelId, jstvEn, jstvStreamName, jstvPath,
+                kankanewsChannelId, kankanewsStreamName,
+                gdtvChannelId, gdtvStreamName,
                 webUrl, webExtra, fullscreenType);
     }
 
@@ -320,6 +340,12 @@ final class ChannelCatalog {
         }
         if ("JSTV".equals(value)) {
             return SOURCE_JSTV;
+        }
+        if ("KANKANEWS".equals(value)) {
+            return SOURCE_KANKANEWS;
+        }
+        if ("GDTV".equals(value)) {
+            return SOURCE_GDTV;
         }
         if ("CUSTOM".equals(value)) {
             return SOURCE_CUSTOM;
