@@ -61,3 +61,6 @@ Thumbs.db
 output/
 .playwright-mcp/
 .playwright-cli/
+
+# Local AI/Codex context, private infrastructure notes
+AI_CONTEXT.md

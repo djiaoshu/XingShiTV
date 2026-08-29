@@ -5,13 +5,16 @@ import com.bu.cc.tv.NativeCmgDecryptor;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.AlertDialog;
 import android.app.UiModeManager;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.InputType;
 import android.util.Base64;
 import android.util.Log;
 import android.view.InputDevice;
@@ -22,6 +25,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -170,9 +174,14 @@ public final class MainActivity extends Activity {
     private View backPrompt;
     private Button backPromptOk;
     private PlaylistManager playlistManager;
+    private ChannelCatalog.Group[] playlistGroups = new ChannelCatalog.Group[0];
+    private ChannelCatalog.Group[] remoteGroups = new ChannelCatalog.Group[0];
+    private ChannelCatalog.Group[] privateGroups = new ChannelCatalog.Group[0];
     private LocalControlServer controlServer;
     private volatile boolean reverseUpDown;
     private boolean remoteInputMode;
+    private String privateSessionPassword;
+    private boolean privateChannelLoading;
     private String numericChannelInput = "";
 
     private final Runnable updateVideoInfo = new Runnable() {
@@ -220,7 +229,15 @@ public final class MainActivity extends Activity {
         reverseUpDown = preferences.getBoolean(REVERSE_UP_DOWN, false);
         remoteInputMode = hasTelevisionUi();
         playlistManager = new PlaylistManager(this);
-        ChannelCatalog.setCustomGroups(playlistManager.loadCached());
+        playlistGroups = playlistManager.loadCached();
+        try {
+            remoteGroups = RemoteChannelConfig.loadCached(this);
+        } catch (Exception error) {
+            remoteGroups = new ChannelCatalog.Group[0];
+            Log.i(TAG, "RemoteConfig: no usable cache " + error.getMessage());
+        }
+        rebuildCustomGroups();
+        loadRemoteChannelConfig();
         liveUrlResolver = new LiveUrlResolver(getSharedPreferences("live_url_resolver", MODE_PRIVATE));
         mgtvLiveResolver = new MgtvLiveResolver(
                 getSharedPreferences("mgtv_live_resolver", MODE_PRIVATE));
@@ -428,7 +445,7 @@ public final class MainActivity extends Activity {
                 "$1<redacted>");
     }
 
-    private static String hostOf(String url) {
+    static String hostOf(String url) {
         try {
             return URI.create(url).getHost();
         } catch (RuntimeException error) {
@@ -455,7 +472,47 @@ public final class MainActivity extends Activity {
         if (lower.contains(".flv")) {
             return "flv";
         }
+        if (lower.contains(".ts")) {
+            return "ts";
+        }
         return "unknown";
+    }
+
+    private static boolean shouldUseDirectCustomSource(String url) {
+        if (url == null) {
+            return false;
+        }
+        String lower = url.toLowerCase(Locale.US);
+        if (lower.contains(".m3u8")) {
+            return false;
+        }
+        if (lower.contains(".ts") || lower.contains(".flv")) {
+            return true;
+        }
+        return isKnownCustomStreamRedirect(url);
+    }
+
+    private static boolean isKnownCustomStreamRedirect(String url) {
+        try {
+            URI uri = URI.create(url);
+            String host = uri.getHost();
+            String path = uri.getPath();
+            return host != null && "m.061899.xyz".equalsIgnoreCase(host)
+                    && path != null && path.startsWith("/mg/");
+        } catch (RuntimeException error) {
+            return false;
+        }
+    }
+
+    private static String customProbeSummary(CustomStreamTypeDetector.Result result) {
+        if (result == null) {
+            return "";
+        }
+        return " detectedType=" + result.type
+                + " probeHttp=" + result.httpStatus
+                + " probeMs=" + result.elapsedMs
+                + " probeCache=" + result.fromCache
+                + " finalHost=" + hostOf(result.finalUrl);
     }
 
     private void refreshManagementAddress() {
@@ -579,13 +636,19 @@ public final class MainActivity extends Activity {
 
     private void applyPlaylistGroups(final ChannelCatalog.Group[] customGroups)
             throws InterruptedException {
+        playlistGroups = customGroups == null ? new ChannelCatalog.Group[0] : customGroups;
+        applyCombinedCustomGroups();
+    }
+
+    private void applyCombinedCustomGroups()
+            throws InterruptedException {
         final CountDownLatch applied = new CountDownLatch(1);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 boolean wasCustom = currentGroupIndex < ChannelCatalog.GROUPS.length
                         && currentGroup().source == ChannelCatalog.SOURCE_CUSTOM;
-                ChannelCatalog.setCustomGroups(customGroups);
+                ChannelCatalog.setCustomGroups(combineCustomGroups());
                 if (currentGroupIndex >= ChannelCatalog.GROUPS.length) {
                     currentGroupIndex = 0;
                     currentChannelIndex = ChannelCatalog.defaultChannelIndex(currentGroup());
@@ -603,6 +666,81 @@ public final class MainActivity extends Activity {
             }
         });
         applied.await(5L, TimeUnit.SECONDS);
+    }
+
+    private void rebuildCustomGroups() {
+        ChannelCatalog.setCustomGroups(combineCustomGroups());
+    }
+
+    private ChannelCatalog.Group[] combineCustomGroups() {
+        int playlistCount = playlistGroups == null ? 0 : playlistGroups.length;
+        int remoteCount = remoteGroups == null ? 0 : remoteGroups.length;
+        ChannelCatalog.Group[] privateList = privateGroups != null && privateGroups.length > 0
+                ? privateGroups : new ChannelCatalog.Group[] { privatePlaceholderGroup() };
+        int privateCount = privateList.length;
+        ChannelCatalog.Group[] groups =
+                new ChannelCatalog.Group[playlistCount + remoteCount + privateCount];
+        if (playlistCount > 0) {
+            System.arraycopy(playlistGroups, 0, groups, 0, playlistCount);
+        }
+        if (remoteCount > 0) {
+            System.arraycopy(remoteGroups, 0, groups, playlistCount, remoteCount);
+        }
+        if (privateCount > 0) {
+            System.arraycopy(privateList, 0, groups, playlistCount + remoteCount, privateCount);
+        }
+        return groups;
+    }
+
+    private ChannelCatalog.Group privatePlaceholderGroup() {
+        Channel channel = Channel.directSource("0", "输入密码加载私密频道",
+                "private_unlock", "about:blank", "输入密码");
+        return new ChannelCatalog.Group(PrivateChannelConfig.GROUP_ID,
+                PrivateChannelConfig.GROUP_NAME, ChannelCatalog.SOURCE_CUSTOM,
+                new Channel[] { channel });
+    }
+
+    private boolean isPrivateGroup(ChannelCatalog.Group group) {
+        return group != null && PrivateChannelConfig.GROUP_ID.equals(group.id);
+    }
+
+    private boolean isPrivateGroupLoaded() {
+        return privateGroups != null && privateGroups.length > 0
+                && privateGroups[0].channels.length > 0
+                && !"private_unlock".equals(privateGroups[0].channels[0].streamId);
+    }
+
+    private boolean isPrivatePlaceholder(ChannelCatalog.Group group) {
+        return isPrivateGroup(group) && !isPrivateGroupLoaded();
+    }
+
+    private void loadRemoteChannelConfig() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final ChannelCatalog.Group[] loaded = RemoteChannelConfig.downloadAndCache(MainActivity.this);
+                    int channelCount = 0;
+                    int sourceCount = 0;
+                    for (ChannelCatalog.Group group : loaded) {
+                        channelCount += group.channels.length;
+                        for (Channel channel : group.channels) {
+                            sourceCount += channel.sourceCount();
+                        }
+                    }
+                    Log.i(TAG, "Remote channel config loaded groups=" + loaded.length
+                            + " channels=" + channelCount
+                            + " sources=" + sourceCount);
+                    remoteGroups = loaded;
+                    applyCombinedCustomGroups();
+                } catch (Exception error) {
+                    Log.w(TAG, "Remote channel config ignored: " + error.getMessage());
+                    if (remoteGroups != null && remoteGroups.length > 0) {
+                        Log.i(TAG, "RemoteConfig: using cached config");
+                    }
+                }
+            }
+        }, "remote-channel-config").start();
     }
 
     private void maybeProbeCmgRuntime() {
@@ -949,6 +1087,11 @@ public final class MainActivity extends Activity {
         final ChannelCatalog.Group group = currentGroup();
         currentChannelIndex = ChannelCatalog.wrapIndex(group.channels, index);
         final Channel channel = group.channels[currentChannelIndex];
+        if (isPrivatePlaceholder(group)) {
+            Log.i(TAG, "Private channel entry selected");
+            showPrivatePasswordDialog();
+            return;
+        }
         Log.i("CHANNEL_TEST", "switch channel name=" + channel.name
                 + " source=" + group.source
                 + " url=" + channel.url);
@@ -1070,7 +1213,11 @@ public final class MainActivity extends Activity {
     private String customSourceStatus(String prefix) {
         Channel channel = currentChannel();
         int count = Math.max(1, channel.sourceCount());
-        return prefix + "线路 " + (currentSourceIndex + 1) + "/" + count;
+        String sourceName = channel.sourceName(currentSourceIndex);
+        if (sourceName == null || sourceName.length() == 0) {
+            sourceName = "线路 " + (currentSourceIndex + 1);
+        }
+        return prefix + sourceName + " " + (currentSourceIndex + 1) + "/" + count;
     }
 
     private boolean switchCustomSource(int offset, boolean automatic, String reason) {
@@ -1106,8 +1253,12 @@ public final class MainActivity extends Activity {
             triedCustomSources = 1;
         }
         startChannel(currentChannelIndex);
+        String sourceName = channel.sourceName(currentSourceIndex);
+        if (sourceName == null || sourceName.length() == 0) {
+            sourceName = "线路 " + (currentSourceIndex + 1);
+        }
         showChannelBar(channel.name, (automatic ? reason + "，自动切换至" : "已切换至")
-                + "线路 " + (currentSourceIndex + 1) + "/" + count);
+                + sourceName + " " + (currentSourceIndex + 1) + "/" + count);
         return true;
     }
 
@@ -1960,7 +2111,29 @@ public final class MainActivity extends Activity {
                 return true;
             }
         });
-        String playerUrl = proxy.proxyUrl(streamUrl);
+        CustomStreamTypeDetector.Result customProbe = null;
+        boolean directCustomStream = customSource && shouldUseDirectCustomSource(streamUrl);
+        if (customSource && "unknown".equals(streamType(streamUrl))) {
+            customProbe = CustomStreamTypeDetector.detect(streamUrl);
+            if (customProbe.type == CustomStreamTypeDetector.MediaType.HLS) {
+                directCustomStream = false;
+            } else if (customProbe.type == CustomStreamTypeDetector.MediaType.FLV
+                    || customProbe.type == CustomStreamTypeDetector.MediaType.MPEG_TS) {
+                directCustomStream = true;
+            }
+        }
+        String playerUrl = directCustomStream ? streamUrl : proxy.proxyUrl(streamUrl);
+        if (directCustomStream) {
+            Log.i("PLAYER_TEST", "custom datasource type=direct"
+                    + " originHost=" + hostOf(streamUrl)
+                    + " originType=" + streamType(streamUrl)
+                    + customProbeSummary(customProbe));
+        } else if (customSource) {
+            Log.i("PLAYER_TEST", "custom datasource type=local_proxy"
+                    + " originHost=" + hostOf(streamUrl)
+                    + " originType=" + streamType(streamUrl)
+                    + customProbeSummary(customProbe));
+        }
         if (kankanewsSource) {
             Log.i("KANKAN", "player datasource type=local_proxy"
                     + " proxyHost=127.0.0.1"
@@ -2099,9 +2272,142 @@ public final class MainActivity extends Activity {
     }
 
     private void switchBrowsingChannel(int position) {
+        ChannelCatalog.Group group = ChannelCatalog.GROUPS[browsingGroupIndex];
+        if (isPrivatePlaceholder(group)) {
+            currentGroupIndex = browsingGroupIndex;
+            currentChannelIndex = ChannelCatalog.wrapIndex(group.channels, position);
+            showPrivatePasswordDialog();
+            return;
+        }
         currentGroupIndex = browsingGroupIndex;
         switchChannel(position);
         closeChannelList();
+    }
+
+    private void showPrivatePasswordDialog() {
+        if (privateChannelLoading) {
+            showChannelBar(PrivateChannelConfig.GROUP_NAME, "正在加载，请稍候");
+            return;
+        }
+        final EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setHint("请输入密码");
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("私密频道")
+                .setMessage("请输入访问密码")
+                .setView(input)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("确定", null)
+                .create();
+        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(final DialogInterface dialogInterface) {
+                final AlertDialog shown = (AlertDialog) dialogInterface;
+                shown.getButton(AlertDialog.BUTTON_POSITIVE)
+                        .setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                String password = input.getText().toString();
+                                if (password.length() == 0) {
+                                    Toast.makeText(MainActivity.this,
+                                            "请输入密码", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                shown.dismiss();
+                                loadPrivateChannels(password);
+                            }
+                        });
+                input.requestFocus();
+                shown.getWindow().setSoftInputMode(
+                        WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            }
+        });
+        dialog.show();
+    }
+
+    private void loadPrivateChannels(final String password) {
+        if (privateChannelLoading) {
+            return;
+        }
+        privateChannelLoading = true;
+        showLoading(PrivateChannelConfig.GROUP_NAME, "正在验证密码");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ChannelCatalog.Group[] loaded = PrivateChannelConfig.download(password);
+                    privateSessionPassword = password;
+                    privateGroups = loaded;
+                    applyCombinedCustomGroups();
+                    int channels = loaded.length == 0 ? 0 : loaded[0].channels.length;
+                    int sources = countSources(loaded);
+                    Log.i(TAG, "Private channels loaded channels=" + channels
+                            + " sources=" + sources);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            privateChannelLoading = false;
+                            int groupIndex = findPrivateGroupIndex();
+                            if (groupIndex < 0) {
+                                hideLoading();
+                                showChannelBar(PrivateChannelConfig.GROUP_NAME,
+                                        "私密频道加载失败");
+                                return;
+                            }
+                            currentGroupIndex = groupIndex;
+                            browsingGroupIndex = groupIndex;
+                            currentChannelIndex = 0;
+                            closeChannelList();
+                            switchChannel(0);
+                        }
+                    });
+                } catch (final PrivateChannelConfig.UnauthorizedException error) {
+                    privateSessionPassword = null;
+                    onPrivateChannelLoadFailed("密码错误", false);
+                } catch (Exception error) {
+                    privateSessionPassword = null;
+                    Log.w(TAG, "Private channel load failed: " + error.getMessage());
+                    onPrivateChannelLoadFailed("私密频道加载失败", true);
+                }
+            }
+        }, "private-channel-config").start();
+    }
+
+    private void onPrivateChannelLoadFailed(final String message, final boolean longToast) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                privateChannelLoading = false;
+                hideLoading();
+                Toast.makeText(MainActivity.this, message,
+                        longToast ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
+                showChannelBar(PrivateChannelConfig.GROUP_NAME, message);
+            }
+        });
+    }
+
+    private int findPrivateGroupIndex() {
+        for (int index = 0; index < ChannelCatalog.GROUPS.length; index++) {
+            if (isPrivateGroup(ChannelCatalog.GROUPS[index])) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static int countSources(ChannelCatalog.Group[] groups) {
+        int count = 0;
+        if (groups == null) {
+            return 0;
+        }
+        for (ChannelCatalog.Group group : groups) {
+            for (Channel channel : group.channels) {
+                count += channel.sourceCount();
+            }
+        }
+        return count;
     }
 
     private void openChannelList() {
@@ -2550,4 +2856,3 @@ public final class MainActivity extends Activity {
         super.onDestroy();
     }
 }
-
