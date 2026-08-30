@@ -41,6 +41,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -58,9 +59,13 @@ public final class MainActivity extends Activity {
     private static final String PREFERENCES = "tv_player";
     private static final String LAST_GROUP_INDEX = "last_group_index";
     private static final String LAST_CHANNEL_INDEX = "last_channel_index";
+    private static final String LAST_SOURCE_PREFERENCES = "last_success_sources";
+    private static final String STATE_GROUP_INDEX = "state_group_index";
+    private static final String STATE_CHANNEL_INDEX = "state_channel_index";
+    private static final String TAG_AUTO_RECOVERY = "AUTO_RECOVERY";
     private static final String REVERSE_UP_DOWN = "reverse_up_down";
     private static final String GITHUB_URL = "https://github.com/djiaoshu/XingShiTV";
-    private static final int FIRST_LAUNCH_GROUP_INDEX = 1;
+    private static final int FIRST_LAUNCH_GROUP_INDEX = 0;
     private static final int FIRST_LAUNCH_CHANNEL_INDEX = 0;
     private static final long CHANNEL_BAR_TIMEOUT_MS = 3000L;
     private static final long PANEL_TIMEOUT_MS = 5000L;
@@ -181,6 +186,11 @@ public final class MainActivity extends Activity {
     private volatile boolean reverseUpDown;
     private boolean remoteInputMode;
     private String privateSessionPassword;
+    private SharedPreferences lastSourcePreferences;
+    private boolean autoRecoveryActive;
+    private int autoRecoveryGroupIndex = -1;
+    private int autoRecoveryStartChannelIndex = -1;
+    private final HashSet<String> autoRecoveryTriedSources = new HashSet<String>();
     private boolean privateChannelLoading;
     private String numericChannelInput = "";
 
@@ -227,6 +237,7 @@ public final class MainActivity extends Activity {
         channelAdapter = new ChannelListAdapter(this);
         final SharedPreferences preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         reverseUpDown = preferences.getBoolean(REVERSE_UP_DOWN, false);
+        lastSourcePreferences = getSharedPreferences(LAST_SOURCE_PREFERENCES, MODE_PRIVATE);
         remoteInputMode = hasTelevisionUi();
         playlistManager = new PlaylistManager(this);
         playlistGroups = playlistManager.loadCached();
@@ -314,13 +325,12 @@ public final class MainActivity extends Activity {
             return;
         }
 
-        boolean hasLastChannel = preferences.contains(LAST_GROUP_INDEX)
-                && preferences.contains(LAST_CHANNEL_INDEX);
-        if (hasLastChannel) {
+        if (savedInstanceState != null && savedInstanceState.containsKey(STATE_GROUP_INDEX)
+                && savedInstanceState.containsKey(STATE_CHANNEL_INDEX)) {
             currentGroupIndex = ChannelCatalog.wrapGroupIndex(
-                    preferences.getInt(LAST_GROUP_INDEX, FIRST_LAUNCH_GROUP_INDEX));
+                    savedInstanceState.getInt(STATE_GROUP_INDEX, FIRST_LAUNCH_GROUP_INDEX));
             currentChannelIndex = ChannelCatalog.wrapIndex(currentGroup().channels,
-                    preferences.getInt(LAST_CHANNEL_INDEX, FIRST_LAUNCH_CHANNEL_INDEX));
+                    savedInstanceState.getInt(STATE_CHANNEL_INDEX, FIRST_LAUNCH_CHANNEL_INDEX));
         } else {
             currentGroupIndex = FIRST_LAUNCH_GROUP_INDEX;
             currentChannelIndex = FIRST_LAUNCH_CHANNEL_INDEX;
@@ -340,6 +350,12 @@ public final class MainActivity extends Activity {
         startManagementServer();
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putInt(STATE_GROUP_INDEX, currentGroupIndex);
+        outState.putInt(STATE_CHANNEL_INDEX, currentChannelIndex);
+        super.onSaveInstanceState(outState);
+    }
     private boolean hasTelevisionUi() {
         UiModeManager manager = (UiModeManager) getSystemService(UI_MODE_SERVICE);
         return (manager != null && manager.getCurrentModeType()
@@ -1077,10 +1093,19 @@ public final class MainActivity extends Activity {
     }
 
     private void switchChannel(int index) {
+        switchChannel(index, false);
+    }
+
+    private void switchChannel(int index, boolean automaticRecovery) {
         clearNumericChannelInput();
-        currentSourceIndex = 0;
+        if (!automaticRecovery) {
+            cancelAutoRecovery("user");
+        }
+        ChannelCatalog.Group group = currentGroup();
+        int channelIndex = ChannelCatalog.wrapIndex(group.channels, index);
+        currentSourceIndex = initialSourceIndex(group, group.channels[channelIndex]);
         triedCustomSources = 1;
-        startChannel(index);
+        startChannel(channelIndex);
     }
 
     private void startChannel(int index) {
@@ -1092,9 +1117,12 @@ public final class MainActivity extends Activity {
             showPrivatePasswordDialog();
             return;
         }
+        if (autoRecoveryActive) {
+            markAutoRecoveryAttempt(group, currentChannelIndex, currentSourceIndex);
+        }
         Log.i("CHANNEL_TEST", "switch channel name=" + channel.name
                 + " source=" + group.source
-                + " url=" + channel.url);
+                + " url=" + safeStreamUrlForLog(channel.sourceUrl(currentSourceIndex)));
         getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit()
                 .putInt(LAST_GROUP_INDEX, currentGroupIndex)
                 .putInt(LAST_CHANNEL_INDEX, currentChannelIndex)
@@ -1224,42 +1252,184 @@ public final class MainActivity extends Activity {
         if (currentGroup().source != ChannelCatalog.SOURCE_CUSTOM) {
             return false;
         }
+        if (automatic) {
+            return handleAutoRecoverySourceFailure(reason);
+        }
+        cancelAutoRecovery("user");
+        clearNumericChannelInput();
         Channel channel = currentChannel();
         int count = channel.sourceCount();
         if (count <= 1) {
-            if (automatic) {
-                hideLoading();
-                showChannelBar(channel.name, reason + "，当前频道没有备用线路");
-            } else {
-                showChannelBar(channel.name, "当前频道只有一条线路");
-            }
+            showChannelBar(channel.name, "当前频道只有一条线路");
             return true;
-        }
-        if (automatic && triedCustomSources >= count) {
-            hideLoading();
-            showChannelBar(channel.name, "全部 " + count + " 条线路均不可用");
-            return true;
-        }
-        if (!automatic) {
-            clearNumericChannelInput();
         }
         currentSourceIndex = (currentSourceIndex + offset) % count;
         if (currentSourceIndex < 0) {
             currentSourceIndex += count;
         }
-        if (automatic) {
-            triedCustomSources++;
-        } else {
-            triedCustomSources = 1;
-        }
+        triedCustomSources = 1;
         startChannel(currentChannelIndex);
         String sourceName = channel.sourceName(currentSourceIndex);
         if (sourceName == null || sourceName.length() == 0) {
             sourceName = "线路 " + (currentSourceIndex + 1);
         }
-        showChannelBar(channel.name, (automatic ? reason + "，自动切换至" : "已切换至")
-                + sourceName + " " + (currentSourceIndex + 1) + "/" + count);
+        showChannelBar(channel.name, "已切换至" + sourceName
+                + " " + (currentSourceIndex + 1) + "/" + count);
         return true;
+    }
+
+    private int initialSourceIndex(ChannelCatalog.Group group, Channel channel) {
+        int count = channel.sourceCount();
+        if (count <= 1) {
+            return 0;
+        }
+        int index = lastSourcePreferences == null ? 0
+                : lastSourcePreferences.getInt(lastSourceKey(group, channel), 0);
+        if (index < 0 || index >= count) {
+            return 0;
+        }
+        Log.i("LAST_SOURCE", "restored channel=" + channel.name + " source=" + index);
+        return index;
+    }
+
+    private void saveLastSuccessSource(ChannelCatalog.Group group, Channel channel) {
+        if (channel.sourceCount() <= 1 || currentSourceIndex < 0
+                || currentSourceIndex >= channel.sourceCount()) {
+            return;
+        }
+        if (lastSourcePreferences == null) {
+            lastSourcePreferences = getSharedPreferences(LAST_SOURCE_PREFERENCES, MODE_PRIVATE);
+        }
+        lastSourcePreferences.edit()
+                .putInt(lastSourceKey(group, channel), currentSourceIndex)
+                .apply();
+        Log.i("LAST_SOURCE", "saved channel=" + channel.name + " source="
+                + currentSourceIndex);
+    }
+
+    private static String lastSourceKey(ChannelCatalog.Group group, Channel channel) {
+        String groupId = group.id == null || group.id.length() == 0 ? group.title : group.id;
+        return groupId + "|" + channel.number + "|" + channel.name;
+    }
+
+    private void cancelAutoRecovery(String reason) {
+        if (!autoRecoveryActive) {
+            return;
+        }
+        Log.i(TAG_AUTO_RECOVERY, "cancelled by " + reason);
+        autoRecoveryActive = false;
+        autoRecoveryGroupIndex = -1;
+        autoRecoveryStartChannelIndex = -1;
+        autoRecoveryTriedSources.clear();
+    }
+
+    private void ensureAutoRecoveryStarted(String reason) {
+        if (autoRecoveryActive) {
+            return;
+        }
+        autoRecoveryActive = true;
+        autoRecoveryGroupIndex = currentGroupIndex;
+        autoRecoveryStartChannelIndex = currentChannelIndex;
+        autoRecoveryTriedSources.clear();
+        Log.i(TAG_AUTO_RECOVERY, "start channel=" + currentChannel().name
+                + " reason=" + reason);
+    }
+
+    private void markAutoRecoveryAttempt(ChannelCatalog.Group group, int channelIndex,
+            int sourceIndex) {
+        autoRecoveryTriedSources.add(autoRecoverySourceKey(group, channelIndex, sourceIndex));
+    }
+
+    private boolean hasAutoRecoveryAttempted(ChannelCatalog.Group group, int channelIndex,
+            int sourceIndex) {
+        return autoRecoveryTriedSources.contains(
+                autoRecoverySourceKey(group, channelIndex, sourceIndex));
+    }
+
+    private static String autoRecoverySourceKey(ChannelCatalog.Group group, int channelIndex,
+            int sourceIndex) {
+        String groupId = group.id == null || group.id.length() == 0 ? group.title : group.id;
+        return groupId + "|" + channelIndex + "|" + sourceIndex;
+    }
+
+    private boolean handleAutoRecoverySourceFailure(String reason) {
+        ensureAutoRecoveryStarted(reason);
+        ChannelCatalog.Group group = currentGroup();
+        Channel channel = currentChannel();
+        markAutoRecoveryAttempt(group, currentChannelIndex, currentSourceIndex);
+        Log.i(TAG_AUTO_RECOVERY, "source failed channel=" + channel.name
+                + " source=" + currentSourceIndex + " reason=" + reason);
+        int count = Math.max(1, channel.sourceCount());
+        for (int offset = 1; offset < count; offset++) {
+            int nextSource = (currentSourceIndex + offset) % count;
+            if (hasAutoRecoveryAttempted(group, currentChannelIndex, nextSource)) {
+                continue;
+            }
+            currentSourceIndex = nextSource;
+            triedCustomSources++;
+            Log.i(TAG_AUTO_RECOVERY, "try source=" + currentSourceIndex);
+            startChannel(currentChannelIndex);
+            showChannelBar(channel.name, reason + "，自动切换至"
+                    + channel.sourceName(currentSourceIndex) + " "
+                    + (currentSourceIndex + 1) + "/" + count);
+            return true;
+        }
+        Log.i(TAG_AUTO_RECOVERY, "channel exhausted channel=" + channel.name);
+        return tryNextAutoRecoveryChannel(reason);
+    }
+
+    private boolean tryNextAutoRecoveryChannel(String reason) {
+        ensureAutoRecoveryStarted(reason);
+        ChannelCatalog.Group group = currentGroup();
+        int size = group.channels.length;
+        for (int offset = 1; offset < size; offset++) {
+            int nextChannel = ChannelCatalog.wrapIndex(group.channels,
+                    currentChannelIndex + offset);
+            if (nextChannel == autoRecoveryStartChannelIndex) {
+                break;
+            }
+            Channel candidate = group.channels[nextChannel];
+            int sourceIndex = initialSourceIndex(group, candidate);
+            if (hasAutoRecoveryAttempted(group, nextChannel, sourceIndex)) {
+                continue;
+            }
+            Log.i(TAG_AUTO_RECOVERY, "next channel=" + candidate.name);
+            switchChannel(nextChannel, true);
+            return true;
+        }
+        Log.i(TAG_AUTO_RECOVERY, "all channels exhausted group=" + group.title);
+        autoRecoveryActive = false;
+        autoRecoveryGroupIndex = -1;
+        autoRecoveryStartChannelIndex = -1;
+        autoRecoveryTriedSources.clear();
+        hideLoading();
+        showChannelBar(currentChannel().name, "当前频道组全部线路不可用");
+        return true;
+    }
+
+    private void handlePlaybackFailure(String reason) {
+        if (currentGroup().source == ChannelCatalog.SOURCE_CUSTOM) {
+            handleAutoRecoverySourceFailure(reason);
+            return;
+        }
+        ensureAutoRecoveryStarted(reason);
+        ChannelCatalog.Group group = currentGroup();
+        Channel channel = currentChannel();
+        markAutoRecoveryAttempt(group, currentChannelIndex, 0);
+        Log.i(TAG_AUTO_RECOVERY, "channel exhausted channel=" + channel.name);
+        tryNextAutoRecoveryChannel(reason);
+    }
+
+    private void onPlaybackReady(Channel channel) {
+        if (currentGroup().channels[currentChannelIndex] != channel) {
+            return;
+        }
+        saveLastSuccessSource(currentGroup(), channel);
+        if (autoRecoveryActive) {
+            Log.i(TAG_AUTO_RECOVERY, "success channel=" + channel.name
+                    + " source=" + currentSourceIndex);
+            cancelAutoRecovery("success");
+        }
     }
 
     private void configureResourceProfile() {
@@ -1797,7 +1967,7 @@ public final class MainActivity extends Activity {
         } catch (IOException error) {
             Log.e(TAG, "Unable to play " + channel.name, error);
             if (currentGroup().source == ChannelCatalog.SOURCE_CUSTOM) {
-                switchCustomSource(1, true, "线路连接失败");
+                handleAutoRecoverySourceFailure("线路连接失败");
                 return;
             }
             hideLoading();
@@ -1977,6 +2147,7 @@ public final class MainActivity extends Activity {
                 }
                 scheduleVideoInfoRefresh();
                 prefetchNearbyChannels(channel);
+                onPlaybackReady(channel);
                 hideLoading();
                 showChannelBar(channel.name, customSource
                         ? customSourceStatus("直播播放中 · ") : "直播播放中");
@@ -1988,7 +2159,9 @@ public final class MainActivity extends Activity {
                 if (player != mediaPlayer) {
                     return false;
                 }
-                if (what == IMediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                if (what == IMediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                    onPlaybackReady(channel);
+                } else if (what == IMediaPlayer.MEDIA_INFO_BUFFERING_START) {
                     buffering = true;
                     bufferingStartedAt = SystemClock.elapsedRealtime();
                     final int eventId = ++bufferingEventId;
@@ -2078,7 +2251,7 @@ public final class MainActivity extends Activity {
                             public void run() {
                                 if (sourceRequestId == playRequestId
                                         && player == failedPlayer) {
-                                    switchCustomSource(1, true, "线路播放失败");
+                                    handleAutoRecoverySourceFailure("线路播放失败");
                                 }
                             }
                         });
@@ -2106,7 +2279,7 @@ public final class MainActivity extends Activity {
                         return true;
                     }
                     hideLoading();
-                    showChannelBar(channel.name, "播放错误: " + what + "/" + extra);
+                    handlePlaybackFailure("播放错误: " + what + "/" + extra);
                 }
                 return true;
             }
@@ -2153,7 +2326,7 @@ public final class MainActivity extends Activity {
                 @Override
                 public void run() {
                     if (sourceRequestId == playRequestId && player == nextPlayer && !prepared) {
-                        switchCustomSource(1, true, "连接超过 5 秒");
+                        handleAutoRecoverySourceFailure("连接超过 5 秒");
                     }
                 }
             }, CUSTOM_SOURCE_TIMEOUT_MS);
@@ -2217,6 +2390,7 @@ public final class MainActivity extends Activity {
     }
 
     private void enterNumericChannel(int digit) {
+        cancelAutoRecovery("user");
         if (numericChannelInput.length() >= 3) {
             clearNumericChannelInput();
         }
@@ -2259,6 +2433,7 @@ public final class MainActivity extends Activity {
     }
 
     private void togglePlayback() {
+        cancelAutoRecovery("user");
         Channel channel = currentChannel();
         if (player == null || !prepared) {
             switchChannel(currentChannelIndex);
@@ -2411,6 +2586,7 @@ public final class MainActivity extends Activity {
     }
 
     private void openChannelList() {
+        cancelAutoRecovery("user");
         clearNumericChannelInput();
         lastBackPressedAt = 0L;
         backPrompt.removeCallbacks(hideBackPrompt);
@@ -2665,6 +2841,7 @@ public final class MainActivity extends Activity {
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN && isTouchInput(event)) {
+            cancelAutoRecovery("user");
             setRemoteInputMode(false);
         }
         return super.dispatchTouchEvent(event);
@@ -2789,6 +2966,7 @@ public final class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        cancelAutoRecovery("user");
         clearNumericChannelInput();
         if (managementPanel.getVisibility() == View.VISIBLE) {
             closeManagementPanel();

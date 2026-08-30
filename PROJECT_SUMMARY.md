@@ -160,13 +160,20 @@
 - `app/build.gradle`
   - `applicationId 'com.xingshi.tv'`
   - `targetSdkVersion 28`
-  - `versionCode 7`
-  - `versionName '1.3.0'`
+  - `versionCode 8`
+  - `versionName '1.3.1'`
 
+## v1.3.1 稳定节点
+
+- 默认启动进入 `CCTV-1 综合`。
+- `SOURCE_CUSTOM` 多线路失败后自动尝试备用线路。
+- 多线路频道记录最近一次成功 source index，下次优先尝试。
+- 当前频道全部线路失败后，只在同频道组内自动尝试下一个频道，最多一轮。
+- 远程频道配置支持根节点 `groups[]` 动态多频道组，同时兼容旧版 `group + channels[]` 单组格式。
 ## 五、当前稳定版本状态
 
-- 当前发布版本：`v1.3.0`
-- Release APK：`XingShiTV-v1.3.0.apk`
+- 当前发布版本：`v1.3.1`
+- Release APK：`XingShiTV-v1.3.1.apk`
 - package/applicationId：`com.xingshi.tv`
 - App名称：星视TV
 - targetSdk：28

@@ -79,11 +79,57 @@ final class RemoteChannelConfig {
             throws JSONException, IOException {
         JSONObject root = new JSONObject(json);
         int version = root.optInt("version", -1);
+        JSONArray groupItems = root.optJSONArray("groups");
+        if (groupItems != null && groupItems.length() > 0) {
+            return parseMultiGroupConfig(root, groupId);
+        }
+        if (version == 1) {
+            return new ChannelCatalog.Group[] {
+                    parseGroup(root, groupId, 0)
+            };
+        }
+        throw new IOException("unsupported remote channel config");
+    }
+
+    private static ChannelCatalog.Group[] parseMultiGroupConfig(JSONObject root,
+            String groupIdPrefix) throws JSONException, IOException {
+        JSONArray groupItems = root.optJSONArray("groups");
+        if (groupItems == null || groupItems.length() == 0) {
+            throw new IOException("remote config contains no groups");
+        }
+        ArrayList<ChannelCatalog.Group> groups = new ArrayList<ChannelCatalog.Group>();
+        for (int index = 0; index < groupItems.length(); index++) {
+            JSONObject item = groupItems.optJSONObject(index);
+            if (item == null) {
+                Log.w(TAG, "Skip invalid remote group index=" + index);
+                continue;
+            }
+            try {
+                groups.add(parseGroup(item, groupIdFor(groupIdPrefix, item, index), index));
+            } catch (IOException error) {
+                Log.w(TAG, "Skip invalid remote group index=" + index
+                        + " reason=" + safeMessage(error));
+            } catch (JSONException error) {
+                Log.w(TAG, "Skip invalid remote group index=" + index
+                        + " reason=" + safeMessage(error));
+            }
+        }
+        if (groups.isEmpty()) {
+            throw new IOException("remote config contains no playable groups");
+        }
+        Log.i(TAG, "Loaded remote config groups=" + groups.size());
+        return groups.toArray(new ChannelCatalog.Group[groups.size()]);
+    }
+
+    private static ChannelCatalog.Group parseGroup(JSONObject root, String groupId,
+            int groupIndex) throws JSONException, IOException {
         String groupName = root.optString("group", "").trim();
+        if (groupName.length() == 0) {
+            groupName = root.optString("name", "").trim();
+        }
         JSONArray channelItems = root.optJSONArray("channels");
-        if (version != 1 || groupName.length() == 0 || channelItems == null
-                || channelItems.length() == 0) {
-            throw new IOException("unsupported remote channel config");
+        if (groupName.length() == 0 || channelItems == null || channelItems.length() == 0) {
+            throw new IOException("invalid remote group");
         }
         ArrayList<Channel> channels = new ArrayList<Channel>();
         int sourceCount = 0;
@@ -112,7 +158,7 @@ final class RemoteChannelConfig {
                         "线路 " + (sourceIndex + 1)).trim();
                 if (channel == null) {
                     channel = Channel.directSource(String.valueOf(channels.size() + 1),
-                            name, "remote_" + index, streamUrl, sourceName);
+                            name, "remote_" + groupIndex + "_" + index, streamUrl, sourceName);
                 } else {
                     channel = channel.withAdditionalSource(sourceName, streamUrl);
                 }
@@ -128,11 +174,32 @@ final class RemoteChannelConfig {
         Log.i(TAG, "Loaded remote config group=" + groupName
                 + " channels=" + channels.size()
                 + " sources=" + sourceCount);
-        return new ChannelCatalog.Group[] {
-                new ChannelCatalog.Group(groupId, groupName,
-                        ChannelCatalog.SOURCE_CUSTOM,
-                        channels.toArray(new Channel[channels.size()]))
-        };
+        return new ChannelCatalog.Group(groupId, groupName,
+                ChannelCatalog.SOURCE_CUSTOM,
+                channels.toArray(new Channel[channels.size()]));
+    }
+
+    private static String groupIdFor(String prefix, JSONObject item, int index) {
+        String id = item.optString("id", "").trim();
+        if (id.length() == 0) {
+            return prefix + "_" + (index + 1);
+        }
+        return prefix + "_" + safeId(id, index);
+    }
+
+    private static String safeId(String value, int index) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+                    || (c >= '0' && c <= '9') || c == '_' || c == '-') {
+                builder.append(c);
+            }
+        }
+        if (builder.length() == 0) {
+            return String.valueOf(index + 1);
+        }
+        return builder.toString();
     }
 
     private static String downloadJson(String configUrl) throws IOException {
