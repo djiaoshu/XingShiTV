@@ -901,18 +901,22 @@ public final class WebPlayerActivity extends Activity {
         if (!isBackPromptVisible()) {
             return false;
         }
+        InputAction action = InputAction.fromKeyCode(keyCode);
         if (event.getAction() == KeyEvent.ACTION_UP) {
             return true;
         }
         if (event.getAction() != KeyEvent.ACTION_DOWN) {
             return true;
         }
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_DPAD_CENTER:
-            case KeyEvent.KEYCODE_ENTER:
+        if (action == null) {
+            focusBackPromptConfirm();
+            return true;
+        }
+        switch (action) {
+            case CONFIRM:
                 confirmBackPrompt();
                 return true;
-            case KeyEvent.KEYCODE_BACK:
+            case BACK:
                 requestExitApp();
                 return true;
             default:
@@ -1336,10 +1340,11 @@ public final class WebPlayerActivity extends Activity {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
+        InputAction action = InputAction.fromKeyCode(keyCode);
         if (isBackPromptVisible()) {
             return handleBackPromptKey(keyCode, event);
         }
-        if (customView != null && keyCode == KeyEvent.KEYCODE_BACK) {
+        if (customView != null && action == InputAction.BACK) {
             if (event.getAction() == KeyEvent.ACTION_DOWN) {
                 if (isGdtvWebPlayer()) {
                     Log.i(TAG, "GDTV back pressed in customView, show back prompt");
@@ -1351,40 +1356,32 @@ public final class WebPlayerActivity extends Activity {
             }
             return true;
         }
-        if (event.getAction() == KeyEvent.ACTION_UP
-                && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
-                || keyCode == KeyEvent.KEYCODE_ENTER
-                || keyCode == KeyEvent.KEYCODE_BACK
-                || keyCode == KeyEvent.KEYCODE_MENU
-                || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                || keyCode == KeyEvent.KEYCODE_DPAD_UP
-                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)) {
+        if (event.getAction() == KeyEvent.ACTION_UP && isWebPlayerHandledAction(action)) {
             return true;
         }
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             if (channelListPanel.getVisibility() == View.VISIBLE) {
                 scheduleChannelListDismiss();
-                switch (keyCode) {
-                    case KeyEvent.KEYCODE_BACK:
-                    case KeyEvent.KEYCODE_MENU:
+                if (action != null) {
+                    switch (action) {
+                    case BACK:
+                    case OPEN_MANAGEMENT:
                         closeChannelList();
                         return true;
-                    case KeyEvent.KEYCODE_DPAD_LEFT:
+                    case SOURCE_PREV:
                         groupList.requestFocus();
                         groupList.setSelection(browsingGroupIndex);
                         return true;
-                    case KeyEvent.KEYCODE_DPAD_RIGHT:
+                    case SOURCE_NEXT:
                         channelList.requestFocus();
                         return true;
-                    case KeyEvent.KEYCODE_DPAD_UP:
+                    case CHANNEL_UP:
                         moveChannelMenuSelection(-1);
                         return true;
-                    case KeyEvent.KEYCODE_DPAD_DOWN:
+                    case CHANNEL_DOWN:
                         moveChannelMenuSelection(1);
                         return true;
-                    case KeyEvent.KEYCODE_DPAD_CENTER:
-                    case KeyEvent.KEYCODE_ENTER:
+                    case CONFIRM:
                         if (channelList.hasFocus()) {
                             int position = channelList.getSelectedItemPosition();
                             if (position != AdapterView.INVALID_POSITION) {
@@ -1396,14 +1393,14 @@ public final class WebPlayerActivity extends Activity {
                         return true;
                     default:
                         break;
+                    }
                 }
             }
-            switch (keyCode) {
-                case KeyEvent.KEYCODE_DPAD_CENTER:
-                case KeyEvent.KEYCODE_ENTER:
+            switch (action == null ? InputAction.CLOSE_MENU : action) {
+                case CONFIRM:
                     requestOriginalChannelMenu("ok");
                     return true;
-                case KeyEvent.KEYCODE_BACK:
+                case BACK:
                     handleBackPressed();
                     return true;
                 default:
@@ -1444,7 +1441,7 @@ public final class WebPlayerActivity extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
+        if (InputAction.fromKeyCode(keyCode) == InputAction.BACK) {
             if (customView != null) {
                 if (isGdtvWebPlayer()) {
                     Log.i(TAG, "onKeyDown GDTV back in customView, show back prompt");
@@ -1459,6 +1456,16 @@ public final class WebPlayerActivity extends Activity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    private boolean isWebPlayerHandledAction(InputAction action) {
+        return action == InputAction.CONFIRM
+                || action == InputAction.BACK
+                || action == InputAction.OPEN_MANAGEMENT
+                || action == InputAction.SOURCE_PREV
+                || action == InputAction.SOURCE_NEXT
+                || action == InputAction.CHANNEL_UP
+                || action == InputAction.CHANNEL_DOWN;
     }
 
     @Override

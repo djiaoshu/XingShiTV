@@ -1,6 +1,6 @@
 # 星视TV项目总结
 
-更新时间：2026-08-31
+更新时间：2026-09-01
 
 ## 一、项目定位
 
@@ -169,8 +169,18 @@
 - `app/build.gradle`
   - `applicationId 'com.xingshi.tv'`
   - `targetSdkVersion 28`
-  - `versionCode 9`
-  - `versionName '1.3.2'`
+  - `versionCode 10`
+  - `versionName '1.3.3'`
+
+## v1.3.3 稳定节点
+
+- 新增统一输入动作层，优化遥控器与键盘操作一致性。
+- 新增 `KEYCODE_CHANNEL_UP/DOWN` 遥控器频道键支持。
+- 优化 Android TV / 电视盒子私密频道密码输入。
+- 新增 IJK 主播放页触屏上下滑动换台、左右滑动换线路。
+- 新增 IJK 主播放页鼠标左键打开菜单、滚轮换台支持。
+- 优化 IJK 与 WebView 的频道菜单按键处理。
+- 保持广东频道 GDTV_PC 与原有播放逻辑兼容。
 
 ## v1.3.2 稳定节点
 
@@ -190,8 +200,8 @@
 - 远程频道配置支持根节点 `groups[]` 动态多频道组，同时兼容旧版 `group + channels[]` 单组格式。
 ## 五、当前稳定版本状态
 
-- 当前发布版本：`v1.3.2`
-- Release APK：`XingShiTV-v1.3.2.apk`
+- 当前发布版本：`v1.3.3`
+- Release APK：`XingShiTV-v1.3.3.apk`
 - package/applicationId：`com.xingshi.tv`
 - App名称：星视TV
 - targetSdk：28

@@ -17,12 +17,14 @@ import android.os.SystemClock;
 import android.text.InputType;
 import android.util.Base64;
 import android.util.Log;
+import android.view.inputmethod.EditorInfo;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -77,6 +79,10 @@ public final class MainActivity extends Activity {
     private static final long CUSTOM_SOURCE_TIMEOUT_MS = 5000L;
     private static final long NUMERIC_CHANNEL_TIMEOUT_MS = 1200L;
     private static final long GDTV_PROXY_MONITOR_INTERVAL_MS = 1000L;
+    private static final float TOUCH_SWIPE_MIN_DISTANCE_DP = 72f;
+    private static final float TOUCH_SWIPE_AXIS_RATIO = 1.45f;
+    private static final float MOUSE_CLICK_MAX_MOVE_DP = 16f;
+    private static final long MOUSE_SCROLL_THROTTLE_MS = 350L;
 
     private final Runnable hideChannelBar = new Runnable() {
         @Override
@@ -193,6 +199,13 @@ public final class MainActivity extends Activity {
     private final HashSet<String> autoRecoveryTriedSources = new HashSet<String>();
     private boolean privateChannelLoading;
     private String numericChannelInput = "";
+    private float touchStartX;
+    private float touchStartY;
+    private boolean touchGestureTracking;
+    private float mouseStartX;
+    private float mouseStartY;
+    private boolean mousePrimaryTracking;
+    private long lastMouseScrollAt;
 
     private final Runnable updateVideoInfo = new Runnable() {
         @Override
@@ -2468,14 +2481,46 @@ public final class MainActivity extends Activity {
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        input.setFocusable(true);
+        input.setFocusableInTouchMode(true);
+        input.setSelectAllOnFocus(true);
         input.setHint("请输入密码");
-        AlertDialog dialog = new AlertDialog.Builder(this)
+        final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("私密频道")
                 .setMessage("请输入访问密码")
                 .setView(input)
                 .setNegativeButton("取消", null)
                 .setPositiveButton("确定", null)
                 .create();
+        input.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
+                boolean done = actionId == EditorInfo.IME_ACTION_DONE;
+                boolean enter = event != null && event.getAction() == KeyEvent.ACTION_DOWN
+                        && (event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                        || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_CENTER);
+                if (done || enter) {
+                    submitPrivatePassword(dialog, input);
+                    return true;
+                }
+                return false;
+            }
+        });
+        input.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean hasFocus) {
+                if (hasFocus) {
+                    showKeyboard(input);
+                }
+            }
+        });
+        input.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showKeyboard(input);
+            }
+        });
         dialog.setOnShowListener(new DialogInterface.OnShowListener() {
             @Override
             public void onShow(final DialogInterface dialogInterface) {
@@ -2484,17 +2529,16 @@ public final class MainActivity extends Activity {
                         .setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
-                                String password = input.getText().toString();
-                                if (password.length() == 0) {
-                                    Toast.makeText(MainActivity.this,
-                                            "请输入密码", Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
-                                shown.dismiss();
-                                loadPrivateChannels(password);
+                                submitPrivatePassword(shown, input);
                             }
                         });
                 input.requestFocus();
+                input.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        showKeyboard(input);
+                    }
+                });
                 shown.getWindow().setSoftInputMode(
                         WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
             }
@@ -2502,7 +2546,69 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
 
+    private void submitPrivatePassword(AlertDialog dialog, EditText input) {
+        if (privateChannelLoading) {
+            return;
+        }
+        String password = input.getText().toString();
+        if (password.length() == 0) {
+            Toast.makeText(MainActivity.this, "请输入密码", Toast.LENGTH_SHORT).show();
+            focusPrivatePasswordInput(input);
+            return;
+        }
+        hideKeyboard(input);
+        setPrivatePasswordDialogEnabled(dialog, false);
+        loadPrivateChannels(password, dialog, input);
+    }
+
+    private void setPrivatePasswordDialogEnabled(AlertDialog dialog, boolean enabled) {
+        if (dialog == null) {
+            return;
+        }
+        Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        Button negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        if (positive != null) {
+            positive.setEnabled(enabled);
+        }
+        if (negative != null) {
+            negative.setEnabled(enabled);
+        }
+    }
+
+    private void focusPrivatePasswordInput(final EditText input) {
+        if (input == null) {
+            return;
+        }
+        input.requestFocus();
+        input.selectAll();
+        input.post(new Runnable() {
+            @Override
+            public void run() {
+                showKeyboard(input);
+            }
+        });
+    }
+
+    private void showKeyboard(EditText input) {
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+
+    private void hideKeyboard(EditText input) {
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
+        }
+    }
+
     private void loadPrivateChannels(final String password) {
+        loadPrivateChannels(password, null, null);
+    }
+
+    private void loadPrivateChannels(final String password, final AlertDialog dialog,
+            final EditText input) {
         if (privateChannelLoading) {
             return;
         }
@@ -2527,9 +2633,14 @@ public final class MainActivity extends Activity {
                             int groupIndex = findPrivateGroupIndex();
                             if (groupIndex < 0) {
                                 hideLoading();
+                                setPrivatePasswordDialogEnabled(dialog, true);
+                                focusPrivatePasswordInput(input);
                                 showChannelBar(PrivateChannelConfig.GROUP_NAME,
                                         "私密频道加载失败");
                                 return;
+                            }
+                            if (dialog != null && dialog.isShowing()) {
+                                dialog.dismiss();
                             }
                             currentGroupIndex = groupIndex;
                             browsingGroupIndex = groupIndex;
@@ -2540,25 +2651,34 @@ public final class MainActivity extends Activity {
                     });
                 } catch (final PrivateChannelConfig.UnauthorizedException error) {
                     privateSessionPassword = null;
-                    onPrivateChannelLoadFailed("密码错误", false);
+                    onPrivateChannelLoadFailed("密码错误", false, dialog, input);
                 } catch (Exception error) {
                     privateSessionPassword = null;
                     Log.w(TAG, "Private channel load failed: " + error.getMessage());
-                    onPrivateChannelLoadFailed("私密频道加载失败", true);
+                    onPrivateChannelLoadFailed("私密频道加载失败", true, dialog, input);
                 }
             }
         }, "private-channel-config").start();
     }
 
     private void onPrivateChannelLoadFailed(final String message, final boolean longToast) {
+        onPrivateChannelLoadFailed(message, longToast, null, null);
+    }
+
+    private void onPrivateChannelLoadFailed(final String message, final boolean longToast,
+            final AlertDialog dialog, final EditText input) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 privateChannelLoading = false;
                 hideLoading();
+                setPrivatePasswordDialogEnabled(dialog, true);
                 Toast.makeText(MainActivity.this, message,
                         longToast ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
                 showChannelBar(PrivateChannelConfig.GROUP_NAME, message);
+                if (dialog != null && dialog.isShowing()) {
+                    focusPrivatePasswordInput(input);
+                }
             }
         });
     }
@@ -2796,33 +2916,7 @@ public final class MainActivity extends Activity {
     }
 
     private static boolean isHandledRemoteKey(int keyCode) {
-        if (digitForKeyCode(keyCode) >= 0) {
-            return true;
-        }
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_DPAD_UP:
-            case KeyEvent.KEYCODE_DPAD_DOWN:
-            case KeyEvent.KEYCODE_DPAD_LEFT:
-            case KeyEvent.KEYCODE_DPAD_RIGHT:
-            case KeyEvent.KEYCODE_DPAD_CENTER:
-            case KeyEvent.KEYCODE_ENTER:
-            case KeyEvent.KEYCODE_MENU:
-            case KeyEvent.KEYCODE_BACK:
-            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static int digitForKeyCode(int keyCode) {
-        if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
-            return keyCode - KeyEvent.KEYCODE_0;
-        }
-        if (keyCode >= KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= KeyEvent.KEYCODE_NUMPAD_9) {
-            return keyCode - KeyEvent.KEYCODE_NUMPAD_0;
-        }
-        return -1;
+        return InputAction.isHandledKey(keyCode);
     }
 
     private void setRemoteInputMode(boolean remote) {
@@ -2838,74 +2932,219 @@ public final class MainActivity extends Activity {
                 || (source & InputDevice.SOURCE_STYLUS) == InputDevice.SOURCE_STYLUS;
     }
 
+    private static boolean isMouseInput(MotionEvent event) {
+        return (event.getSource() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE;
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN && isTouchInput(event)) {
+        if (isMouseInput(event)) {
+            return dispatchMouseEvent(event);
+        }
+        if (!isTouchInput(event)) {
+            return super.dispatchTouchEvent(event);
+        }
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
             cancelAutoRecovery("user");
             setRemoteInputMode(false);
+            touchStartX = event.getX();
+            touchStartY = event.getY();
+            touchGestureTracking = canHandlePlaybackTouchGesture();
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+            touchGestureTracking = false;
+        } else if (action == MotionEvent.ACTION_UP) {
+            if (touchGestureTracking) {
+                InputAction inputAction = touchActionFromGesture(
+                        event.getX() - touchStartX, event.getY() - touchStartY);
+                touchGestureTracking = false;
+                if (inputAction != null && performPlaybackTouchAction(inputAction)) {
+                    return true;
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
+    private boolean dispatchMouseEvent(MotionEvent event) {
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_SCROLL) {
+            return handleMouseScroll(event) || super.dispatchTouchEvent(event);
+        }
+        if (action == MotionEvent.ACTION_BUTTON_PRESS
+                || action == MotionEvent.ACTION_BUTTON_RELEASE) {
+            Log.i(TAG, "MOUSE_BUTTON action=" + action
+                    + " buttonState=" + event.getButtonState());
+            if ((event.getButtonState() & MotionEvent.BUTTON_SECONDARY) != 0) {
+                Log.i(TAG, "MOUSE_BUTTON secondary action=" + action);
+            }
+            return super.dispatchTouchEvent(event);
+        }
+        if (action == MotionEvent.ACTION_DOWN) {
+            cancelAutoRecovery("user");
+            setRemoteInputMode(false);
+            mouseStartX = event.getX();
+            mouseStartY = event.getY();
+            mousePrimaryTracking = canHandlePlaybackTouchGesture();
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+            mousePrimaryTracking = false;
+        } else if (action == MotionEvent.ACTION_UP && mousePrimaryTracking) {
+            mousePrimaryTracking = false;
+            float maxMove = MOUSE_CLICK_MAX_MOVE_DP * getResources().getDisplayMetrics().density;
+            float dx = event.getX() - mouseStartX;
+            float dy = event.getY() - mouseStartY;
+            if (Math.abs(dx) <= maxMove && Math.abs(dy) <= maxMove) {
+                performPlaybackTouchAction(InputAction.OPEN_MENU);
+                return true;
+            }
         }
         return super.dispatchTouchEvent(event);
     }
 
     @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        if (isMouseInput(event)) {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_SCROLL) {
+                return handleMouseScroll(event) || super.dispatchGenericMotionEvent(event);
+            }
+            if (action == MotionEvent.ACTION_BUTTON_PRESS
+                    || action == MotionEvent.ACTION_BUTTON_RELEASE) {
+                Log.i(TAG, "MOUSE_BUTTON action=" + action
+                        + " buttonState=" + event.getButtonState());
+                if ((event.getButtonState() & MotionEvent.BUTTON_SECONDARY) != 0) {
+                    Log.i(TAG, "MOUSE_BUTTON secondary action=" + action);
+                }
+            }
+        }
+        return super.dispatchGenericMotionEvent(event);
+    }
+
+    private boolean handleMouseScroll(MotionEvent event) {
+        if (!canHandlePlaybackTouchGesture()) {
+            return false;
+        }
+        float vscroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL);
+        Log.i(TAG, "MOUSE_SCROLL vscroll=" + vscroll);
+        if (vscroll == 0f) {
+            return false;
+        }
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastMouseScrollAt < MOUSE_SCROLL_THROTTLE_MS) {
+            return true;
+        }
+        lastMouseScrollAt = now;
+        cancelAutoRecovery("user");
+        setRemoteInputMode(false);
+        performPlaybackTouchAction(vscroll > 0f
+                ? InputAction.CHANNEL_UP : InputAction.CHANNEL_DOWN);
+        return true;
+    }
+
+    private boolean canHandlePlaybackTouchGesture() {
+        return channelListPanel.getVisibility() != View.VISIBLE
+                && managementPanel.getVisibility() != View.VISIBLE
+                && backPrompt.getVisibility() != View.VISIBLE;
+    }
+
+    private InputAction touchActionFromGesture(float dx, float dy) {
+        float absDx = Math.abs(dx);
+        float absDy = Math.abs(dy);
+        float minDistance = TOUCH_SWIPE_MIN_DISTANCE_DP
+                * getResources().getDisplayMetrics().density;
+        if (absDx < minDistance && absDy < minDistance) {
+            return InputAction.OPEN_MENU;
+        }
+        if (absDx >= absDy * TOUCH_SWIPE_AXIS_RATIO) {
+            return dx < 0 ? InputAction.SOURCE_NEXT : InputAction.SOURCE_PREV;
+        }
+        if (absDy >= absDx * TOUCH_SWIPE_AXIS_RATIO) {
+            return dy < 0 ? InputAction.CHANNEL_UP : InputAction.CHANNEL_DOWN;
+        }
+        return null;
+    }
+
+    private boolean performPlaybackTouchAction(InputAction action) {
+        Log.i(TAG, "TOUCH_GESTURE action=" + action);
+        switch (action) {
+            case OPEN_MENU:
+            case CONFIRM:
+                openChannelList();
+                return true;
+            case CHANNEL_UP:
+                switchRelative(reverseUpDown ? 1 : -1);
+                return true;
+            case CHANNEL_DOWN:
+                switchRelative(reverseUpDown ? -1 : 1);
+                return true;
+            case SOURCE_PREV:
+                switchCustomSource(-1, false, "touch");
+                return true;
+            case SOURCE_NEXT:
+                switchCustomSource(1, false, "touch");
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int keyCode = event.getKeyCode();
-        if (event.getAction() == KeyEvent.ACTION_DOWN && isHandledRemoteKey(keyCode)) {
+        InputAction action = InputAction.fromKeyCode(keyCode);
+        if (event.getAction() == KeyEvent.ACTION_DOWN && action != null) {
             setRemoteInputMode(true);
         }
-        if (event.getAction() == KeyEvent.ACTION_UP && isHandledRemoteKey(keyCode)) {
+        if (event.getAction() == KeyEvent.ACTION_UP && action != null) {
             return true;
         }
         if (event.getAction() != KeyEvent.ACTION_DOWN) {
             return super.dispatchKeyEvent(event);
         }
-        if (event.getRepeatCount() > 0
-                && keyCode != KeyEvent.KEYCODE_DPAD_UP
-                && keyCode != KeyEvent.KEYCODE_DPAD_DOWN
-                && isHandledRemoteKey(keyCode)) {
+        if (event.getRepeatCount() > 0 && action != null
+                && !action.allowsRepeatNavigation()) {
             return true;
         }
 
         if (backPrompt.getVisibility() == View.VISIBLE
-                && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
-                || keyCode == KeyEvent.KEYCODE_ENTER
-                || keyCode == KeyEvent.KEYCODE_MENU)) {
+                && (action == InputAction.CONFIRM
+                || action == InputAction.OPEN_MANAGEMENT)) {
             confirmBackPrompt();
             return true;
         }
-        if (backPrompt.getVisibility() == View.VISIBLE && keyCode != KeyEvent.KEYCODE_BACK) {
-            return isHandledRemoteKey(keyCode) || super.dispatchKeyEvent(event);
+        if (backPrompt.getVisibility() == View.VISIBLE && action != InputAction.BACK) {
+            return action != null || super.dispatchKeyEvent(event);
         }
 
         if (managementPanel.getVisibility() == View.VISIBLE) {
-            if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_MENU) {
+            if (action == InputAction.BACK || action == InputAction.OPEN_MANAGEMENT) {
                 closeManagementPanel();
             }
-            return isHandledRemoteKey(keyCode) || super.dispatchKeyEvent(event);
+            return action != null || super.dispatchKeyEvent(event);
         }
 
         if (channelListPanel.getVisibility() == View.VISIBLE) {
             scheduleChannelListDismiss();
-            switch (keyCode) {
-                case KeyEvent.KEYCODE_BACK:
-                case KeyEvent.KEYCODE_MENU:
+            if (action != null) {
+                switch (action) {
+                case BACK:
+                case OPEN_MANAGEMENT:
                     closeChannelList();
                     return true;
-                case KeyEvent.KEYCODE_DPAD_LEFT:
+                case SOURCE_PREV:
                     groupList.requestFocus();
                     groupList.setSelection(browsingGroupIndex);
                     return true;
-                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                case SOURCE_NEXT:
                     channelList.requestFocus();
                     return true;
-                case KeyEvent.KEYCODE_DPAD_UP:
+                case CHANNEL_UP:
                     moveChannelMenuSelection(-1);
                     return true;
-                case KeyEvent.KEYCODE_DPAD_DOWN:
+                case CHANNEL_DOWN:
                     moveChannelMenuSelection(1);
                     return true;
-                case KeyEvent.KEYCODE_DPAD_CENTER:
-                case KeyEvent.KEYCODE_ENTER:
+                case CONFIRM:
                     if (channelList.hasFocus()) {
                         int position = channelList.getSelectedItemPosition();
                         if (position != AdapterView.INVALID_POSITION) {
@@ -2916,47 +3155,50 @@ public final class MainActivity extends Activity {
                     }
                     return true;
                 default:
-                    return super.dispatchKeyEvent(event);
+                    break;
+                }
             }
+            return super.dispatchKeyEvent(event);
         }
 
-        if (event.getRepeatCount() > 0 && (keyCode == KeyEvent.KEYCODE_DPAD_UP
-                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN)) {
+        if (event.getRepeatCount() > 0 && action != null
+                && action.allowsRepeatNavigation()) {
             return true;
         }
-        int digit = digitForKeyCode(keyCode);
-        if (digit >= 0) {
-            enterNumericChannel(digit);
+        if (action != null && action.isDigit()) {
+            enterNumericChannel(action.digitValue());
             return true;
         }
-        switch (keyCode) {
-            case KeyEvent.KEYCODE_DPAD_LEFT:
+        if (action == null) {
+            return super.dispatchKeyEvent(event);
+        }
+        switch (action) {
+            case SOURCE_PREV:
                 if (switchCustomSource(-1, false, "")) {
                     return true;
                 }
                 return super.dispatchKeyEvent(event);
-            case KeyEvent.KEYCODE_DPAD_RIGHT:
+            case SOURCE_NEXT:
                 if (switchCustomSource(1, false, "")) {
                     return true;
                 }
                 return super.dispatchKeyEvent(event);
-            case KeyEvent.KEYCODE_DPAD_UP:
+            case CHANNEL_UP:
                 switchRelative(reverseUpDown ? 1 : -1);
                 return true;
-            case KeyEvent.KEYCODE_DPAD_DOWN:
+            case CHANNEL_DOWN:
                 switchRelative(reverseUpDown ? -1 : 1);
                 return true;
-            case KeyEvent.KEYCODE_DPAD_CENTER:
-            case KeyEvent.KEYCODE_ENTER:
+            case CONFIRM:
                 openChannelList();
                 return true;
-            case KeyEvent.KEYCODE_MENU:
+            case OPEN_MANAGEMENT:
                 openManagement();
                 return true;
-            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+            case PLAY_PAUSE:
                 togglePlayback();
                 return true;
-            case KeyEvent.KEYCODE_BACK:
+            case BACK:
                 onBackPressed();
                 return true;
             default:
