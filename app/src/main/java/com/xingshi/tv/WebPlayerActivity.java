@@ -51,6 +51,10 @@ public final class WebPlayerActivity extends Activity {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     + "AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/129.0.0.0 Safari/537.36";
+    private static final String GDTV_PC_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    + "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    + "Chrome/149.0.0.0 Safari/537.36";
     private static final String VIDEO_DETECT_JS =
             "(function(){"
                     + "if(window.nativeTvVideoWatcherStarted){console.log('WEBVIEW_TEST JS already injected');return;}"
@@ -363,6 +367,109 @@ public final class WebPlayerActivity extends Activity {
                     + "observer.observe(document.documentElement||document.body,{childList:true,subtree:true});"
                     + "}"
                     + "})();";
+    private static final String GDTV_PC_PLAYER_JS =
+            "(function(){"
+                    + "if(window.__xstvGdtvPcStarted){console.log('WEBVIEW_TEST gdtv pc already injected');return;}"
+                    + "window.__xstvGdtvPcStarted=true;"
+                    + "console.log('WEBVIEW_TEST gdtv pc injected');"
+                    + "function cls(e){"
+                    + "if(!e||!e.className){return '';}"
+                    + "if(typeof e.className==='string'){return e.className;}"
+                    + "if(e.className.baseVal){return e.className.baseVal;}"
+                    + "return String(e.className);"
+                    + "}"
+                    + "function visible(e){"
+                    + "try{var r=e.getBoundingClientRect();var s=getComputedStyle(e);"
+                    + "return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';"
+                    + "}catch(err){return false;}"
+                    + "}"
+                    + "function fill(el){"
+                    + "el.style.position='fixed';"
+                    + "el.style.left='0';"
+                    + "el.style.top='0';"
+                    + "el.style.right='0';"
+                    + "el.style.bottom='0';"
+                    + "el.style.width='100vw';"
+                    + "el.style.height='100vh';"
+                    + "el.style.margin='0';"
+                    + "el.style.background='#000';"
+                    + "el.style.zIndex='2147483647';"
+                    + "}"
+                    + "function layoutPlayer(player){"
+                    + "document.documentElement.style.margin='0';"
+                    + "document.documentElement.style.padding='0';"
+                    + "document.documentElement.style.width='100vw';"
+                    + "document.documentElement.style.height='100vh';"
+                    + "document.documentElement.style.overflow='hidden';"
+                    + "document.documentElement.style.background='#000';"
+                    + "document.body.style.margin='0';"
+                    + "document.body.style.padding='0';"
+                    + "document.body.style.width='100vw';"
+                    + "document.body.style.height='100vh';"
+                    + "document.body.style.overflow='hidden';"
+                    + "document.body.style.background='#000';"
+                    + "if(player.parentNode!==document.body){document.body.appendChild(player);}"
+                    + "for(var i=0;i<document.body.children.length;i++){"
+                    + "var child=document.body.children[i];"
+                    + "if(child!==player){child.style.display='none';}"
+                    + "}"
+                    + "fill(player);"
+                    + "var videos=player.getElementsByTagName('video');"
+                    + "for(var j=0;j<videos.length;j++){"
+                    + "videos[j].style.width='100%';"
+                    + "videos[j].style.height='100%';"
+                    + "videos[j].style.objectFit='fill';"
+                    + "videos[j].style.background='#000';"
+                    + "}"
+                    + "}"
+                    + "function notifyPlaying(){"
+                    + "if(window.__xstvGdtvPcPlaying){return;}"
+                    + "window.__xstvGdtvPcPlaying=true;"
+                    + "console.log('WEBVIEW_TEST gdtv pc video playing');"
+                    + "}"
+                    + "function watchVideos(player){"
+                    + "var videos=player.getElementsByTagName('video');"
+                    + "console.log('WEBVIEW_TEST gdtv pc video count='+videos.length);"
+                    + "for(var i=0;i<videos.length;i++){"
+                    + "var v=videos[i];"
+                    + "if(v.__xstvGdtvPcVideo){continue;}"
+                    + "v.__xstvGdtvPcVideo=true;"
+                    + "v.autoplay=true;"
+                    + "v.muted=false;"
+                    + "v.addEventListener('playing',notifyPlaying);"
+                    + "v.addEventListener('play',function(){console.log('WEBVIEW_TEST gdtv pc video play');});"
+                    + "v.addEventListener('canplay',function(){console.log('WEBVIEW_TEST gdtv pc video canplay');});"
+                    + "v.addEventListener('loadedmetadata',function(){console.log('WEBVIEW_TEST gdtv pc video loadedmetadata');});"
+                    + "if(!v.paused&&!v.ended&&v.readyState>=2){notifyPlaying();}"
+                    + "}"
+                    + "}"
+                    + "function setup(player){"
+                    + "if(!player||!visible(player)){return false;}"
+                    + "if(!window.__xstvGdtvPcPlayerFound){"
+                    + "window.__xstvGdtvPcPlayerFound=true;"
+                    + "console.log('WEBVIEW_TEST gdtv pc player found class='+cls(player));"
+                    + "}"
+                    + "layoutPlayer(player);"
+                    + "watchVideos(player);"
+                    + "return true;"
+                    + "}"
+                    + "function scan(){"
+                    + "var player=document.querySelector('#J_prismPlayer');"
+                    + "if(player){setup(player);return true;}"
+                    + "return false;"
+                    + "}"
+                    + "var attempts=0;"
+                    + "var timer=setInterval(function(){"
+                    + "attempts++;"
+                    + "if(scan()&&window.__xstvGdtvPcPlaying){clearInterval(timer);return;}"
+                    + "if(attempts>=160){clearInterval(timer);console.log('WEBVIEW_TEST gdtv pc player timeout');}"
+                    + "},250);"
+                    + "if(window.MutationObserver){"
+                    + "var observer=new MutationObserver(function(){scan();});"
+                    + "observer.observe(document.documentElement||document.body,{childList:true,subtree:true});"
+                    + "}"
+                    + "scan();"
+                    + "})();";
 
     private FrameLayout root;
     private FrameLayout customViewContainer;
@@ -484,6 +591,10 @@ public final class WebPlayerActivity extends Activity {
             finish();
             return;
         }
+        if (isGdtvPcWebPlayer()) {
+            webView.getSettings().setUserAgentString(GDTV_PC_USER_AGENT);
+            Log.i(TAG, "GDTV PC UA=" + webView.getSettings().getUserAgentString());
+        }
         Log.i(TAG, "loadUrl=" + url);
         Log.i(TAG, "before loadUrl=" + url);
         updateLoadingProgress(30, "开始加载网页");
@@ -589,7 +700,7 @@ public final class WebPlayerActivity extends Activity {
                     return;
                 }
                 loadingOverlay.setVisibility(View.VISIBLE);
-                if (isGdtvWebPlayer()) {
+                if (isGdtvLoadingControlled()) {
                     loadingOverlay.bringToFront();
                 }
                 if (loadingProgress != null) {
@@ -603,7 +714,7 @@ public final class WebPlayerActivity extends Activity {
                 }
                 Log.i(TAG, "loading progress=" + progress + " status=" + status);
                 if (progress >= 100) {
-                    if (isGdtvWebPlayer()) {
+                    if (isGdtvLoadingControlled()) {
                         return;
                     }
                     loadingOverlay.postDelayed(new Runnable() {
@@ -620,6 +731,17 @@ public final class WebPlayerActivity extends Activity {
     }
 
     private void handleWebConsoleProgress(String message) {
+        if (isGdtvPcWebPlayer()) {
+            if (message.contains("gdtv pc player found")) {
+                updateLoadingProgress(70, "找到播放器");
+            } else if (message.contains("gdtv pc video playing")) {
+                updateLoadingProgress(100, "video playing");
+                hideLoadingOverlayNow("GDTV PC video playing");
+            } else if (message.contains("gdtv pc player timeout")) {
+                updateLoadingProgress(60, "等待播放器");
+            }
+            return;
+        }
         if (isGdtvWebPlayer()) {
             if (message.contains("fullscreenchange [object HTMLDivElement]")) {
                 gdtvFullscreenChanged = true;
@@ -809,6 +931,14 @@ public final class WebPlayerActivity extends Activity {
         return fullscreenType != null && "GDTV".equalsIgnoreCase(fullscreenType);
     }
 
+    private boolean isGdtvPcWebPlayer() {
+        return fullscreenType != null && "GDTV_PC".equalsIgnoreCase(fullscreenType);
+    }
+
+    private boolean isGdtvLoadingControlled() {
+        return isGdtvWebPlayer() || isGdtvPcWebPlayer();
+    }
+
     private void handleBackPressed() {
         if (channelListPanel.getVisibility() == View.VISIBLE) {
             closeChannelList();
@@ -921,7 +1051,11 @@ public final class WebPlayerActivity extends Activity {
                 Log.i(TAG, "WebView currentUrl=" + view.getUrl());
                 updateLoadingProgress(50, "网页加载完成");
                 injectMgtvExtraScript(url);
-                injectVideoDetectScript();
+                if (isGdtvPcWebPlayer()) {
+                    injectGdtvPcPlayerScript();
+                } else {
+                    injectVideoDetectScript();
+                }
             }
         });
         webView.setWebChromeClient(new WebChromeClient() {
@@ -985,6 +1119,14 @@ public final class WebPlayerActivity extends Activity {
             return;
         }
         Log.i(TAG, "GDTV fullscreen conditions met, hide loading");
+        hideLoadingOverlayNow("GDTV fullscreen conditions met");
+    }
+
+    private void hideLoadingOverlayNow(String reason) {
+        if (loadingOverlay == null) {
+            return;
+        }
+        Log.i(TAG, "hide loading reason=" + reason);
         loadingOverlay.setVisibility(View.GONE);
     }
 
@@ -1068,6 +1210,14 @@ public final class WebPlayerActivity extends Activity {
         }
         Log.i(TAG, "JS injected");
         webView.evaluateJavascript(VIDEO_DETECT_JS, null);
+    }
+
+    private void injectGdtvPcPlayerScript() {
+        if (webView == null) {
+            return;
+        }
+        Log.i(TAG, "GDTV PC JS injected");
+        webView.evaluateJavascript(GDTV_PC_PLAYER_JS, null);
     }
 
     @JavascriptInterface

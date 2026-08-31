@@ -1,6 +1,6 @@
 # 星视TV项目总结
 
-更新时间：2026-08-29
+更新时间：2026-08-31
 
 ## 一、项目定位
 
@@ -44,7 +44,8 @@
 ### 远程频道
 
 - 已支持附加远程频道配置加载。
-- 远程「港台频道」已接入，支持 21 个频道、27 条线路。
+- 远程「港台频道」已接入，当前保留 19 个频道、23 条线路。
+- 远程公开频道配置支持 AES-256-GCM 密文响应和密文缓存，同时兼容旧明文配置。
 - 支持远程多线路频道，同一频道下保留多个 `sources`，由用户自行切换线路。
 - 远程配置异常时不影响内置频道显示和播放。
 - 支持私密频道入口和密码验证；密码只在当前 App 会话内使用，不写入源码、配置文件或日志。
@@ -54,6 +55,7 @@
 - WebView 播放 Activity：`WebPlayerActivity.java`。
 - WebView 使用 PC User-Agent，解决部分网页直播跳移动端或播放器异常的问题。
 - WebView 频道使用 `webUrl / webExtra / fullscreenType` 配置。
+- 广东频道使用 `fullscreenType=GDTV_PC`，通过 GDtV PC 页面播放器 DOM 全屏化并在 `video playing` 后隐藏 Loading。
 - MGTV 频道统一入口：`https://www.mgtv.com/live/`
 - MGTV 通过 `webExtra=分类名 频道名` 自动选台。
 - 「网页播放备用」已调整为「湖南地方频道（备用）」。
@@ -66,16 +68,17 @@
 
 ### 频道统计
 
-- 内置频道组：7 个
-- 内置频道总数：130 个
+- 内置频道组：8 个
+- 内置频道总数：147 个
 - 央视网频道：20 个
 - 央视频央视频道：27 个
 - 央视频卫视频道：33 个
 - 湖南 MGTV 原生频道：6 个
 - 江苏 JSTV 原生频道：31 个
 - 湖南 WebView 备用频道：8 个
+- 广东频道：17 个
 
-说明：广东频道因源站状态变化已暂时从正式内置频道中下线。
+说明：广东频道已恢复，统一采用 GDtV PC 页面 WebView 播放方式，排除购物频道「南方购物」。
 
 ### 全屏
 
@@ -121,13 +124,19 @@
 
 - `app/src/main/assets/channel_catalog.json`
   - 内置频道组和频道配置。
-  - 当前内置 7 个频道组、130 个频道。
+  - 当前内置 8 个频道组、147 个频道。
   - JSON 只保存频道数据和播放参数，不保存 Resolver 签名算法或解析规则。
 
 - `app/src/main/java/com/xingshi/tv/RemoteChannelConfig.java`
   - 远程公开频道配置加载、校验、缓存和解析。
   - 将远程多线路频道映射为 `SOURCE_CUSTOM`。
+  - 支持 AES-256-GCM 密文响应，解密并校验成功后才更新本地密文缓存。
+  - 继续兼容旧明文配置和 `groups[]` 动态多频道组格式。
   - 远程失败时不影响本地内置频道。
+
+- `app/src/main/java/com/xingshi/tv/RemoteConfigCrypto.java`
+  - 远程公开频道配置密文包装识别和 AES-256-GCM 解密。
+  - 不在日志中输出密钥、明文频道 JSON 或直播 URL。
 
 - `app/src/main/java/com/xingshi/tv/PrivateChannelConfig.java`
   - 私密频道配置加载和校验。
@@ -160,8 +169,17 @@
 - `app/build.gradle`
   - `applicationId 'com.xingshi.tv'`
   - `targetSdkVersion 28`
-  - `versionCode 8`
-  - `versionName '1.3.1'`
+  - `versionCode 9`
+  - `versionName '1.3.2'`
+
+## v1.3.2 稳定节点
+
+- 恢复广东频道，新增 17 路 GDtV PC 页面播放。
+- 优化广东频道 WebView 播放兼容性。
+- 远程频道配置新增 AES-256-GCM 加密支持。
+- 远程配置本地缓存改为密文缓存。
+- 保持旧明文配置兼容。
+- 保持远程动态多频道组兼容。
 
 ## v1.3.1 稳定节点
 
@@ -172,8 +190,8 @@
 - 远程频道配置支持根节点 `groups[]` 动态多频道组，同时兼容旧版 `group + channels[]` 单组格式。
 ## 五、当前稳定版本状态
 
-- 当前发布版本：`v1.3.1`
-- Release APK：`XingShiTV-v1.3.1.apk`
+- 当前发布版本：`v1.3.2`
+- Release APK：`XingShiTV-v1.3.2.apk`
 - package/applicationId：`com.xingshi.tv`
 - App名称：星视TV
 - targetSdk：28

@@ -36,7 +36,8 @@ final class RemoteChannelConfig {
             throw new IOException("remote config cache missing");
         }
         try {
-            ChannelCatalog.Group[] groups = parse(new String(readFile(file), "UTF-8"));
+            String response = new String(readFile(file), "UTF-8");
+            ChannelCatalog.Group[] groups = parse(RemoteConfigCrypto.decryptIfNeeded(response));
             Log.i(TAG, "RemoteConfig: loaded from cache");
             return groups;
         } catch (JSONException error) {
@@ -47,9 +48,10 @@ final class RemoteChannelConfig {
     static ChannelCatalog.Group[] downloadAndCache(Context context) throws IOException {
         IOException lastError = null;
         try {
-            String json = downloadJson(CLOUDFLARE_CONFIG_URL);
+            String response = downloadJson(CLOUDFLARE_CONFIG_URL);
+            String json = RemoteConfigCrypto.decryptIfNeeded(response);
             ChannelCatalog.Group[] groups = parse(json);
-            saveCache(context, json);
+            saveCache(context, response);
             Log.i(TAG, "RemoteConfig: Cloudflare success");
             Log.i(TAG, "RemoteConfig: cache updated");
             return groups;
@@ -65,7 +67,8 @@ final class RemoteChannelConfig {
 
     static ChannelCatalog.Group[] download() throws IOException {
         try {
-            return parse(downloadJson(CLOUDFLARE_CONFIG_URL));
+            String response = downloadJson(CLOUDFLARE_CONFIG_URL);
+            return parse(RemoteConfigCrypto.decryptIfNeeded(response));
         } catch (JSONException error) {
             throw new IOException("invalid remote channel config", error);
         }
@@ -225,11 +228,11 @@ final class RemoteChannelConfig {
         }
     }
 
-    private static void saveCache(Context context, String json) throws IOException {
+    private static void saveCache(Context context, String response) throws IOException {
         FileOutputStream output = null;
         try {
             output = new FileOutputStream(cacheFile(context));
-            output.write(json.getBytes("UTF-8"));
+            output.write(response.getBytes("UTF-8"));
         } finally {
             if (output != null) {
                 output.close();

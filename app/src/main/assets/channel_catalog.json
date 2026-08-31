@@ -42,6 +42,12 @@
       "name": "湖南地方频道（备用）",
       "sourceType": "WEBVIEW",
       "order": 8
+    },
+    {
+      "id": "gdtv",
+      "name": "广东频道",
+      "sourceType": "WEBVIEW",
+      "order": 9
     }
   ],
   "channels": [
@@ -1299,6 +1305,159 @@
       "webUrl": "https://www.mgtv.com/live/",
       "webExtra": "热门 金鹰纪实",
       "fullscreenType": "MGTV"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "201",
+      "name": "广东卫视",
+      "sourceType": "WEBVIEW",
+      "order": 1,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/43",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "202",
+      "name": "广东珠江",
+      "sourceType": "WEBVIEW",
+      "order": 2,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/44",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "203",
+      "name": "广东新闻",
+      "sourceType": "WEBVIEW",
+      "order": 3,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/45",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "204",
+      "name": "广东民生",
+      "sourceType": "WEBVIEW",
+      "order": 4,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/48",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "205",
+      "name": "广东体育",
+      "sourceType": "WEBVIEW",
+      "order": 5,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/47",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "206",
+      "name": "大湾区卫视",
+      "sourceType": "WEBVIEW",
+      "order": 6,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/51",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "207",
+      "name": "大湾区卫视海外版",
+      "sourceType": "WEBVIEW",
+      "order": 7,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/46",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "208",
+      "name": "广东影视",
+      "sourceType": "WEBVIEW",
+      "order": 8,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/53",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "209",
+      "name": "4K超高清",
+      "sourceType": "WEBVIEW",
+      "order": 9,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/16",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "210",
+      "name": "广东少儿",
+      "sourceType": "WEBVIEW",
+      "order": 10,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/54",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "211",
+      "name": "嘉佳卡通",
+      "sourceType": "WEBVIEW",
+      "order": 11,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/66",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "212",
+      "name": "岭南戏曲",
+      "sourceType": "WEBVIEW",
+      "order": 12,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/15",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "213",
+      "name": "广东移动",
+      "sourceType": "WEBVIEW",
+      "order": 13,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/74",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "214",
+      "name": "广东台经典剧",
+      "sourceType": "WEBVIEW",
+      "order": 14,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/100",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "215",
+      "name": "纪录片",
+      "sourceType": "WEBVIEW",
+      "order": 15,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/94",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "216",
+      "name": "健康",
+      "sourceType": "WEBVIEW",
+      "order": 16,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/99",
+      "fullscreenType": "GDTV_PC"
+    },
+    {
+      "groupId": "gdtv",
+      "number": "217",
+      "name": "GRTN生活",
+      "sourceType": "WEBVIEW",
+      "order": 17,
+      "webUrl": "https://www.gdtv.cn/tvChannelDetail/102",
+      "fullscreenType": "GDTV_PC"
     }
   ]
 }
