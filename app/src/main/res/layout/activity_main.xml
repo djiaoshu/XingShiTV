@@ -135,7 +135,7 @@
 
     <LinearLayout
         android:id="@+id/channel_list_panel"
-        android:layout_width="600dp"
+        android:layout_width="960dp"
         android:layout_height="match_parent"
         android:background="@drawable/channel_panel_background"
         android:orientation="vertical"
@@ -201,7 +201,7 @@
 
             <ListView
                 android:id="@+id/channel_group_list"
-                android:layout_width="200dp"
+                android:layout_width="190dp"
                 android:layout_height="match_parent"
                 android:choiceMode="singleChoice"
                 android:clipToPadding="false"
@@ -221,9 +221,8 @@
 
             <ListView
                 android:id="@+id/channel_list"
-                android:layout_width="0dp"
+                android:layout_width="300dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
                 android:choiceMode="singleChoice"
                 android:clipToPadding="false"
                 android:divider="@android:color/transparent"
@@ -232,6 +231,61 @@
                 android:listSelector="@drawable/channel_item_background"
                 android:paddingTop="4dp"
                 android:paddingBottom="4dp" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:background="@color/divider" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/epg_panel_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:paddingLeft="6dp"
+                    android:paddingRight="6dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/epg_empty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:padding="16dp"
+                    android:text="暂无节目信息"
+                    android:textColor="@color/text_muted"
+                    android:textSize="16sp"
+                    android:visibility="gone"
+                    tools:ignore="HardcodedText" />
+
+                <ListView
+                    android:id="@+id/epg_program_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_weight="1"
+                    android:choiceMode="singleChoice"
+                    android:clipToPadding="false"
+                    android:divider="@android:color/transparent"
+                    android:dividerHeight="5dp"
+                    android:focusableInTouchMode="true"
+                    android:listSelector="@drawable/epg_program_background"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="8dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

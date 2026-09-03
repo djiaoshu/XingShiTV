@@ -61,6 +61,7 @@ Thumbs.db
 output/
 .playwright-mcp/
 .playwright-cli/
+tools/vps-epg-mirror/
 
 # Local AI/Codex context, private infrastructure notes
 AI_CONTEXT.md

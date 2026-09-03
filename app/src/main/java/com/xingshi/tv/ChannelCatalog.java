@@ -265,6 +265,8 @@ final class ChannelCatalog {
         String webUrl = item.optString("webUrl", null);
         String webExtra = item.optString("webExtra", null);
         String fullscreenType = item.optString("fullscreenType", null);
+        String epgId = item.optString("epgId", null);
+        String epgSource = item.optString("epgSource", null);
 
         if (source == SOURCE_CCTV_WEB) {
             if (streamId == null || streamId.length() == 0) {
@@ -314,12 +316,17 @@ final class ChannelCatalog {
             streamId = "webview_" + number;
         }
 
-        return new Channel(number, name, streamId, url,
+        Channel channel = new Channel(number, name, streamId, url,
                 yangshipinPid, yangshipinStreamId, activityId, cameraId,
                 jstvChannelId, jstvEn, jstvStreamName, jstvPath,
                 kankanewsChannelId, kankanewsStreamName,
                 gdtvChannelId, gdtvStreamName,
                 webUrl, webExtra, fullscreenType);
+        if ((epgId == null || epgId.trim().length() == 0)
+                && (epgSource == null || epgSource.trim().length() == 0)) {
+            return channel;
+        }
+        return channel.withEpg(epgId, epgSource);
     }
 
     private static int sourceFromName(String value) {

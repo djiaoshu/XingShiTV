@@ -142,6 +142,8 @@ final class RemoteChannelConfig {
                 continue;
             }
             String name = item.optString("name", "").trim();
+            String epgId = item.optString("epgId", "").trim();
+            String epgSource = item.optString("epgSource", "").trim();
             JSONArray sources = item.optJSONArray("sources");
             if (name.length() == 0 || sources == null || sources.length() == 0) {
                 Log.w(TAG, "Skip invalid remote channel index=" + index);
@@ -161,7 +163,8 @@ final class RemoteChannelConfig {
                         "线路 " + (sourceIndex + 1)).trim();
                 if (channel == null) {
                     channel = Channel.directSource(String.valueOf(channels.size() + 1),
-                            name, "remote_" + groupIndex + "_" + index, streamUrl, sourceName);
+                            name, "remote_" + groupIndex + "_" + index, streamUrl, sourceName,
+                            epgId, epgSource);
                 } else {
                     channel = channel.withAdditionalSource(sourceName, streamUrl);
                 }

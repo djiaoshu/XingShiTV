@@ -1,6 +1,6 @@
 # 星视TV项目总结
 
-更新时间：2026-09-01
+更新时间：2026-09-03
 
 ## 一、项目定位
 
@@ -169,8 +169,16 @@
 - `app/build.gradle`
   - `applicationId 'com.xingshi.tv'`
   - `targetSdkVersion 28`
-  - `versionCode 10`
-  - `versionName '1.3.3'`
+  - `versionCode 11`
+  - `versionName '1.3.4'`
+
+## v1.3.4 稳定节点
+
+- 完善央视、卫视节目单。
+- 完善港台频道节目单。
+- 优化 EPG 缓存与自动刷新机制。
+- 修复跨日后节目单可能无法及时更新的问题。
+- 提升节目单加载稳定性。
 
 ## v1.3.3 稳定节点
 
@@ -200,8 +208,8 @@
 - 远程频道配置支持根节点 `groups[]` 动态多频道组，同时兼容旧版 `group + channels[]` 单组格式。
 ## 五、当前稳定版本状态
 
-- 当前发布版本：`v1.3.3`
-- Release APK：`XingShiTV-v1.3.3.apk`
+- 当前发布版本：`v1.3.4`
+- Release APK：`XingShiTV-v1.3.4.apk`
 - package/applicationId：`com.xingshi.tv`
 - App名称：星视TV
 - targetSdk：28

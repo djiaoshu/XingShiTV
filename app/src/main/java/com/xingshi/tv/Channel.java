@@ -22,6 +22,8 @@ final class Channel {
     final String webUrl;
     final String webExtra;
     final String fullscreenType;
+    final String epgId;
+    final String epgSource;
 
     Channel(String number, String name, String streamId, String url,
             String yangshipinPid, String yangshipinStreamId) {
@@ -104,7 +106,7 @@ final class Channel {
                 yangshipinPid, yangshipinStreamId, mgtvActivityId, mgtvCameraId,
                 jstvChannelId, jstvEn, jstvStreamName, jstvPath,
                 kankanewsChannelId, kankanewsStreamName, gdtvChannelId, gdtvStreamName,
-                webUrl, webExtra, fullscreenType);
+                webUrl, webExtra, fullscreenType, null, null);
     }
 
     private Channel(String number, String name, String streamId, String[] urls,
@@ -113,7 +115,8 @@ final class Channel {
             String mgtvCameraId, String jstvChannelId, String jstvEn, String jstvStreamName,
             String jstvPath, String kankanewsChannelId, String kankanewsStreamName,
             String gdtvChannelId, String gdtvStreamName,
-            String webUrl, String webExtra, String fullscreenType) {
+            String webUrl, String webExtra, String fullscreenType,
+            String epgId, String epgSource) {
         this.number = number;
         this.name = name;
         this.streamId = streamId;
@@ -135,15 +138,22 @@ final class Channel {
         this.webUrl = webUrl;
         this.webExtra = webExtra;
         this.fullscreenType = fullscreenType;
+        this.epgId = normalize(epgId);
+        this.epgSource = normalize(epgSource);
     }
 
     static Channel directSource(String number, String name, String streamId,
             String url, String sourceName) {
+        return directSource(number, name, streamId, url, sourceName, null, null);
+    }
+
+    static Channel directSource(String number, String name, String streamId,
+            String url, String sourceName, String epgId, String epgSource) {
         return new Channel(number, name, streamId,
                 url == null ? new String[0] : new String[] { url },
                 sourceName == null ? null : new String[] { sourceName },
                 null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, epgId, epgSource);
     }
 
     Channel withAdditionalUrl(String additionalUrl) {
@@ -167,7 +177,15 @@ final class Channel {
                 yangshipinPid, yangshipinStreamId, mgtvActivityId, mgtvCameraId,
                 jstvChannelId, jstvEn, jstvStreamName, jstvPath,
                 kankanewsChannelId, kankanewsStreamName, gdtvChannelId, gdtvStreamName,
-                webUrl, webExtra, fullscreenType);
+                webUrl, webExtra, fullscreenType, epgId, epgSource);
+    }
+
+    Channel withEpg(String epgId, String epgSource) {
+        return new Channel(number, name, streamId, urls, sourceNames,
+                yangshipinPid, yangshipinStreamId, mgtvActivityId, mgtvCameraId,
+                jstvChannelId, jstvEn, jstvStreamName, jstvPath,
+                kankanewsChannelId, kankanewsStreamName, gdtvChannelId, gdtvStreamName,
+                webUrl, webExtra, fullscreenType, epgId, epgSource);
     }
 
     int sourceCount() {
@@ -198,6 +216,14 @@ final class Channel {
                     ? "线路 " + (index + 1) : value.trim();
         }
         return normalized;
+    }
+
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.length() == 0 ? null : trimmed;
     }
 }
 

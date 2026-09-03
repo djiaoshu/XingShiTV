@@ -137,10 +137,14 @@ public final class MainActivity extends Activity {
     private TextView loadingStatus;
     private TextView numericChannelOverlay;
     private TextView managementUrl;
+    private TextView epgPanelTitle;
+    private TextView epgEmpty;
     private ListView groupList;
     private ListView channelList;
+    private ListView epgProgramList;
     private ChannelListAdapter groupAdapter;
     private ChannelListAdapter channelAdapter;
+    private EpgProgramAdapter epgProgramAdapter;
     private LiveUrlResolver liveUrlResolver;
     private MgtvLiveResolver mgtvLiveResolver;
     private JstvLiveResolver jstvLiveResolver;
@@ -171,6 +175,7 @@ public final class MainActivity extends Activity {
     private long bufferingStartedAt;
     private long lastPlaybackProgressAt;
     private long lastPlaybackPosition = -1L;
+    private String currentPlaybackStatus = "";
     private boolean buffering;
     private boolean bufferingStatusVisible;
     private boolean playbackProgressObserved;
@@ -192,6 +197,7 @@ public final class MainActivity extends Activity {
     private volatile boolean reverseUpDown;
     private boolean remoteInputMode;
     private String privateSessionPassword;
+    private EpgManager epgManager;
     private SharedPreferences lastSourcePreferences;
     private boolean autoRecoveryActive;
     private int autoRecoveryGroupIndex = -1;
@@ -213,6 +219,15 @@ public final class MainActivity extends Activity {
             refreshVideoInfo();
             if (player != null) {
                 videoInfo.postDelayed(this, 1000L);
+            }
+        }
+    };
+    private final Runnable updateEpgStatus = new Runnable() {
+        @Override
+        public void run() {
+            refreshCurrentEpgStatus();
+            if (player != null || channelBar.getVisibility() == View.VISIBLE) {
+                channelBar.postDelayed(this, 60000L);
             }
         }
     };
@@ -240,14 +255,18 @@ public final class MainActivity extends Activity {
         loadingStatus = (TextView) findViewById(R.id.loading_status);
         numericChannelOverlay = (TextView) findViewById(R.id.numeric_channel_overlay);
         managementUrl = (TextView) findViewById(R.id.management_url);
+        epgPanelTitle = (TextView) findViewById(R.id.epg_panel_title);
+        epgEmpty = (TextView) findViewById(R.id.epg_empty);
         managementQr = (QrCodeView) findViewById(R.id.management_qr);
         managementPanel = findViewById(R.id.management_panel);
         backPrompt = findViewById(R.id.back_navigation_prompt);
         backPromptOk = (Button) findViewById(R.id.back_prompt_ok);
         groupList = (ListView) findViewById(R.id.channel_group_list);
         channelList = (ListView) findViewById(R.id.channel_list);
+        epgProgramList = (ListView) findViewById(R.id.epg_program_list);
         groupAdapter = new ChannelListAdapter(this);
         channelAdapter = new ChannelListAdapter(this);
+        epgProgramAdapter = new EpgProgramAdapter(this);
         final SharedPreferences preferences = getSharedPreferences(PREFERENCES, MODE_PRIVATE);
         reverseUpDown = preferences.getBoolean(REVERSE_UP_DOWN, false);
         lastSourcePreferences = getSharedPreferences(LAST_SOURCE_PREFERENCES, MODE_PRIVATE);
@@ -262,6 +281,19 @@ public final class MainActivity extends Activity {
         }
         rebuildCustomGroups();
         loadRemoteChannelConfig();
+        epgManager = new EpgManager(this, new EpgManager.Listener() {
+            @Override
+            public void onEpgChanged() {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        refreshCurrentEpgStatus();
+                        refreshSelectedEpgPanel();
+                    }
+                });
+            }
+        });
+        epgManager.start();
         liveUrlResolver = new LiveUrlResolver(getSharedPreferences("live_url_resolver", MODE_PRIVATE));
         mgtvLiveResolver = new MgtvLiveResolver(
                 getSharedPreferences("mgtv_live_resolver", MODE_PRIVATE));
@@ -272,6 +304,7 @@ public final class MainActivity extends Activity {
                 getIntent().getBooleanExtra("cmg_keep_web_trace", false));
         groupList.setAdapter(groupAdapter);
         channelList.setAdapter(channelAdapter);
+        epgProgramList.setAdapter(epgProgramAdapter);
         groupList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -295,6 +328,16 @@ public final class MainActivity extends Activity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 switchBrowsingChannel(position);
+            }
+        });
+        channelList.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                updateEpgPanelForSelectedChannel(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
 
@@ -2738,7 +2781,63 @@ public final class MainActivity extends Activity {
         channelAdapter.showChannels(group.channels, selectedIndex);
         groupList.setSelection(browsingGroupIndex);
         channelList.setSelection(selectedIndex);
+        updateEpgPanel(group, selectedIndex);
         scheduleChannelListDismiss();
+    }
+
+    private void refreshSelectedEpgPanel() {
+        if (channelListPanel == null || channelListPanel.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        int position = channelList.getSelectedItemPosition();
+        if (position == AdapterView.INVALID_POSITION) {
+            position = browsingGroupIndex == currentGroupIndex
+                    ? currentChannelIndex : ChannelCatalog.defaultChannelIndex(
+                            ChannelCatalog.GROUPS[browsingGroupIndex]);
+        }
+        updateEpgPanelForSelectedChannel(position);
+    }
+
+    private void updateEpgPanelForSelectedChannel(int channelIndex) {
+        if (channelListPanel == null || channelListPanel.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        ChannelCatalog.Group group = ChannelCatalog.GROUPS[browsingGroupIndex];
+        updateEpgPanel(group, channelIndex);
+    }
+
+    private void updateEpgPanel(ChannelCatalog.Group group, int channelIndex) {
+        if (group == null || group.channels.length == 0) {
+            epgPanelTitle.setText("今日节目");
+            epgProgramAdapter.setPrograms(new EpgManager.Programme[0], -1);
+            epgProgramList.setVisibility(View.GONE);
+            epgEmpty.setVisibility(View.VISIBLE);
+            return;
+        }
+        int safeIndex = ChannelCatalog.wrapIndex(group.channels, channelIndex);
+        Channel channel = group.channels[safeIndex];
+        epgPanelTitle.setText(channel.name + " · 今日节目");
+        EpgManager.Programme[] programmes = epgManager == null
+                ? new EpgManager.Programme[0]
+                : epgManager.programsForToday(channel, System.currentTimeMillis());
+        int currentIndex = epgManager == null ? -1
+                : epgManager.currentProgramIndex(programmes, System.currentTimeMillis());
+        traceEpgUi("panel", channel, programmes.length, currentIndex);
+        epgProgramAdapter.setPrograms(programmes, currentIndex);
+        if (programmes.length == 0) {
+            epgProgramList.setVisibility(View.GONE);
+            epgEmpty.setVisibility(View.VISIBLE);
+            return;
+        }
+        epgEmpty.setVisibility(View.GONE);
+        epgProgramList.setVisibility(View.VISIBLE);
+        final int focusIndex = currentIndex >= 0 ? currentIndex : 0;
+        epgProgramList.post(new Runnable() {
+            @Override
+            public void run() {
+                epgProgramList.setSelection(focusIndex);
+            }
+        });
     }
 
     private void closeChannelList() {
@@ -2759,11 +2858,64 @@ public final class MainActivity extends Activity {
             public void run() {
                 channelBar.removeCallbacks(hideChannelBar);
                 channelName.setText(channel);
-                statusText.setText(status);
+                currentPlaybackStatus = status;
+                statusText.setText(statusWithEpg(status));
                 channelBar.setVisibility(View.VISIBLE);
                 channelBar.postDelayed(hideChannelBar, CHANNEL_BAR_TIMEOUT_MS);
+                scheduleEpgStatusRefresh();
             }
         });
+    }
+
+    private void refreshCurrentEpgStatus() {
+        if (statusText == null || currentPlaybackStatus == null) {
+            return;
+        }
+        if (channelBar.getVisibility() == View.VISIBLE) {
+            statusText.setText(statusWithEpg(currentPlaybackStatus));
+        }
+    }
+
+    private void scheduleEpgStatusRefresh() {
+        channelBar.removeCallbacks(updateEpgStatus);
+        channelBar.postDelayed(updateEpgStatus, 60000L);
+    }
+
+    private String statusWithEpg(String status) {
+        if (epgManager == null || !epgManager.isReady()) {
+            return status;
+        }
+        EpgManager.ProgramState state =
+                epgManager.currentState(currentChannel(), System.currentTimeMillis());
+        if (state == null || !state.hasAny()) {
+            traceEpgUi("status", currentChannel(), 0, -1);
+            return status;
+        }
+        traceEpgUi("status", currentChannel(), 1, state.current == null ? -1 : 0);
+        StringBuilder builder = new StringBuilder(status == null ? "" : status);
+        long now = System.currentTimeMillis();
+        if (state.current != null) {
+            builder.append("  ·  正在: ").append(state.current.title)
+                    .append(" ").append(state.current.progressPercent(now)).append("%");
+        }
+        if (state.next != null) {
+            builder.append("  ·  下个: ").append(state.next.title);
+        }
+        return builder.toString();
+    }
+
+    private static void traceEpgUi(String stage, Channel channel, int count,
+            int currentIndex) {
+        if (channel == null || (!"CCTV-1 综合".equals(channel.name)
+                && !"湖南卫视".equals(channel.name)
+                && !"江苏卫视".equals(channel.name))) {
+            return;
+        }
+        Log.i("EPG_TRACE", "ui " + stage + " channel=" + channel.name
+                + " epgSource=" + channel.epgSource
+                + " epgId=" + channel.epgId
+                + " count=" + count
+                + " currentIndex=" + currentIndex);
     }
 
     private void showLoading(final String channel, final String status) {
@@ -2814,6 +2966,9 @@ public final class MainActivity extends Activity {
         lastPlaybackProgressAt = 0L;
         if (videoInfo != null) {
             videoInfo.removeCallbacks(updateVideoInfo);
+        }
+        if (channelBar != null) {
+            channelBar.removeCallbacks(updateEpgStatus);
         }
         if (player != null) {
             player.setSurface(null);
@@ -2886,6 +3041,20 @@ public final class MainActivity extends Activity {
     }
 
     private void moveChannelMenuSelection(int offset) {
+        if (epgProgramList.hasFocus()) {
+            int count = epgProgramAdapter.getCount();
+            if (count <= 0) {
+                return;
+            }
+            int position = epgProgramList.getSelectedItemPosition();
+            if (position == AdapterView.INVALID_POSITION) {
+                position = 0;
+            }
+            int nextPosition = Math.max(0, Math.min(count - 1, position + offset));
+            epgProgramList.setSelection(nextPosition);
+            return;
+        }
+
         if (groupList.hasFocus()) {
             int position = groupList.getSelectedItemPosition();
             if (position == AdapterView.INVALID_POSITION) {
@@ -3132,11 +3301,21 @@ public final class MainActivity extends Activity {
                     closeChannelList();
                     return true;
                 case SOURCE_PREV:
-                    groupList.requestFocus();
-                    groupList.setSelection(browsingGroupIndex);
+                    if (epgProgramList.hasFocus()) {
+                        channelList.requestFocus();
+                    } else {
+                        groupList.requestFocus();
+                        groupList.setSelection(browsingGroupIndex);
+                    }
                     return true;
                 case SOURCE_NEXT:
-                    channelList.requestFocus();
+                    if (groupList.hasFocus()) {
+                        channelList.requestFocus();
+                    } else if (epgProgramAdapter.getCount() > 0) {
+                        epgProgramList.requestFocus();
+                    } else {
+                        channelList.requestFocus();
+                    }
                     return true;
                 case CHANNEL_UP:
                     moveChannelMenuSelection(-1);
@@ -3150,7 +3329,7 @@ public final class MainActivity extends Activity {
                         if (position != AdapterView.INVALID_POSITION) {
                             switchBrowsingChannel(position);
                         }
-                    } else {
+                    } else if (!epgProgramList.hasFocus()) {
                         channelList.requestFocus();
                     }
                     return true;

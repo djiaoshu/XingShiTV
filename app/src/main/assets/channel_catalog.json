@@ -59,7 +59,9 @@
       "order": 1,
       "streamId": "cctv1",
       "yangshipinPid": "600001859",
-      "yangshipinStreamId": "2024078201"
+      "yangshipinStreamId": "2024078201",
+      "epgId": "CCTV1",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -69,7 +71,9 @@
       "order": 2,
       "streamId": "cctv2",
       "yangshipinPid": "600001800",
-      "yangshipinStreamId": "2024075401"
+      "yangshipinStreamId": "2024075401",
+      "epgId": "CCTV2",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -79,7 +83,9 @@
       "order": 3,
       "streamId": "cctv3",
       "yangshipinPid": "600001801",
-      "yangshipinStreamId": "2024068501"
+      "yangshipinStreamId": "2024068501",
+      "epgId": "CCTV3",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -89,7 +95,9 @@
       "order": 4,
       "streamId": "cctv4",
       "yangshipinPid": "600001814",
-      "yangshipinStreamId": "2029797101"
+      "yangshipinStreamId": "2029797101",
+      "epgId": "CCTV4",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -99,7 +107,9 @@
       "order": 5,
       "streamId": "cctv5",
       "yangshipinPid": "600001818",
-      "yangshipinStreamId": "2024078401"
+      "yangshipinStreamId": "2024078401",
+      "epgId": "CCTV5",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -109,7 +119,9 @@
       "order": 6,
       "streamId": "cctv5plus",
       "yangshipinPid": "600001817",
-      "yangshipinStreamId": "2024078001"
+      "yangshipinStreamId": "2024078001",
+      "epgId": "CCTV5+",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -119,7 +131,9 @@
       "order": 7,
       "streamId": "cctv6",
       "yangshipinPid": "600108442",
-      "yangshipinStreamId": "2013693901"
+      "yangshipinStreamId": "2013693901",
+      "epgId": "CCTV6",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -129,7 +143,9 @@
       "order": 8,
       "streamId": "cctv7",
       "yangshipinPid": "600004092",
-      "yangshipinStreamId": "2024072001"
+      "yangshipinStreamId": "2024072001",
+      "epgId": "CCTV7",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -139,7 +155,9 @@
       "order": 9,
       "streamId": "cctv8",
       "yangshipinPid": "600001803",
-      "yangshipinStreamId": "2029793001"
+      "yangshipinStreamId": "2029793001",
+      "epgId": "CCTV8",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -149,7 +167,9 @@
       "order": 10,
       "streamId": "cctvjilu",
       "yangshipinPid": "600004078",
-      "yangshipinStreamId": "2024078601"
+      "yangshipinStreamId": "2024078601",
+      "epgId": "CCTV9",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -159,7 +179,9 @@
       "order": 11,
       "streamId": "cctv10",
       "yangshipinPid": "600001805",
-      "yangshipinStreamId": "2024078701"
+      "yangshipinStreamId": "2024078701",
+      "epgId": "CCTV10",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -169,7 +191,9 @@
       "order": 12,
       "streamId": "cctv11",
       "yangshipinPid": "600001806",
-      "yangshipinStreamId": "2027248701"
+      "yangshipinStreamId": "2027248701",
+      "epgId": "CCTV11",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -179,7 +203,9 @@
       "order": 13,
       "streamId": "cctv12",
       "yangshipinPid": "600001807",
-      "yangshipinStreamId": "2027248801"
+      "yangshipinStreamId": "2027248801",
+      "epgId": "CCTV12",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -189,7 +215,9 @@
       "order": 14,
       "streamId": "cctv13",
       "yangshipinPid": "600001811",
-      "yangshipinStreamId": "2029797201"
+      "yangshipinStreamId": "2029797201",
+      "epgId": "CCTV13",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -199,7 +227,9 @@
       "order": 15,
       "streamId": "cctvchild",
       "yangshipinPid": "600001809",
-      "yangshipinStreamId": "2027248901"
+      "yangshipinStreamId": "2027248901",
+      "epgId": "CCTV14",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -209,7 +239,9 @@
       "order": 16,
       "streamId": "cctv15",
       "yangshipinPid": "600001815",
-      "yangshipinStreamId": "2027249001"
+      "yangshipinStreamId": "2027249001",
+      "epgId": "CCTV15",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -219,7 +251,9 @@
       "order": 17,
       "streamId": "cctv16",
       "yangshipinPid": "600098637",
-      "yangshipinStreamId": "2027249101"
+      "yangshipinStreamId": "2027249101",
+      "epgId": "CCTV16",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -229,7 +263,9 @@
       "order": 18,
       "streamId": "cctv17",
       "yangshipinPid": "600001810",
-      "yangshipinStreamId": "2027249401"
+      "yangshipinStreamId": "2027249401",
+      "epgId": "CCTV17",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -237,7 +273,9 @@
       "name": "CCTV-4 中文国际（欧）",
       "sourceType": "CCTV_WEB",
       "order": 19,
-      "streamId": "cctveurope"
+      "streamId": "cctveurope",
+      "epgId": "CCTV4欧洲",
+      "epgSource": "112114"
     },
     {
       "groupId": "cctv_web",
@@ -245,7 +283,9 @@
       "name": "CCTV-4 中文国际（美）",
       "sourceType": "CCTV_WEB",
       "order": 20,
-      "streamId": "cctvamerica"
+      "streamId": "cctvamerica",
+      "epgId": "CCTV4美洲",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -254,7 +294,9 @@
       "sourceType": "YSP_CCTV",
       "order": 1,
       "yangshipinPid": "600001859",
-      "yangshipinStreamId": "2024078201"
+      "yangshipinStreamId": "2024078201",
+      "epgId": "CCTV1",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -263,7 +305,9 @@
       "sourceType": "YSP_CCTV",
       "order": 2,
       "yangshipinPid": "600001800",
-      "yangshipinStreamId": "2024075401"
+      "yangshipinStreamId": "2024075401",
+      "epgId": "CCTV2",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -272,7 +316,9 @@
       "sourceType": "YSP_CCTV",
       "order": 3,
       "yangshipinPid": "600001801",
-      "yangshipinStreamId": "2024068501"
+      "yangshipinStreamId": "2024068501",
+      "epgId": "CCTV3",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -281,7 +327,9 @@
       "sourceType": "YSP_CCTV",
       "order": 4,
       "yangshipinPid": "600001814",
-      "yangshipinStreamId": "2029797101"
+      "yangshipinStreamId": "2029797101",
+      "epgId": "CCTV4",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -290,7 +338,9 @@
       "sourceType": "YSP_CCTV",
       "order": 5,
       "yangshipinPid": "600001818",
-      "yangshipinStreamId": "2024078401"
+      "yangshipinStreamId": "2024078401",
+      "epgId": "CCTV5",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -299,7 +349,9 @@
       "sourceType": "YSP_CCTV",
       "order": 6,
       "yangshipinPid": "600001817",
-      "yangshipinStreamId": "2024078001"
+      "yangshipinStreamId": "2024078001",
+      "epgId": "CCTV5+",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -308,7 +360,9 @@
       "sourceType": "YSP_CCTV",
       "order": 7,
       "yangshipinPid": "600108442",
-      "yangshipinStreamId": "2013693901"
+      "yangshipinStreamId": "2013693901",
+      "epgId": "CCTV6",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -317,7 +371,9 @@
       "sourceType": "YSP_CCTV",
       "order": 8,
       "yangshipinPid": "600004092",
-      "yangshipinStreamId": "2024072001"
+      "yangshipinStreamId": "2024072001",
+      "epgId": "CCTV7",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -326,7 +382,9 @@
       "sourceType": "YSP_CCTV",
       "order": 9,
       "yangshipinPid": "600001803",
-      "yangshipinStreamId": "2029793001"
+      "yangshipinStreamId": "2029793001",
+      "epgId": "CCTV8",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -335,7 +393,9 @@
       "sourceType": "YSP_CCTV",
       "order": 10,
       "yangshipinPid": "600004078",
-      "yangshipinStreamId": "2024078601"
+      "yangshipinStreamId": "2024078601",
+      "epgId": "CCTV9",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -344,7 +404,9 @@
       "sourceType": "YSP_CCTV",
       "order": 11,
       "yangshipinPid": "600001805",
-      "yangshipinStreamId": "2024078701"
+      "yangshipinStreamId": "2024078701",
+      "epgId": "CCTV10",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -353,7 +415,9 @@
       "sourceType": "YSP_CCTV",
       "order": 12,
       "yangshipinPid": "600001806",
-      "yangshipinStreamId": "2027248701"
+      "yangshipinStreamId": "2027248701",
+      "epgId": "CCTV11",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -362,7 +426,9 @@
       "sourceType": "YSP_CCTV",
       "order": 13,
       "yangshipinPid": "600001807",
-      "yangshipinStreamId": "2027248801"
+      "yangshipinStreamId": "2027248801",
+      "epgId": "CCTV12",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -371,7 +437,9 @@
       "sourceType": "YSP_CCTV",
       "order": 14,
       "yangshipinPid": "600001811",
-      "yangshipinStreamId": "2029797201"
+      "yangshipinStreamId": "2029797201",
+      "epgId": "CCTV13",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -380,7 +448,9 @@
       "sourceType": "YSP_CCTV",
       "order": 15,
       "yangshipinPid": "600001809",
-      "yangshipinStreamId": "2027248901"
+      "yangshipinStreamId": "2027248901",
+      "epgId": "CCTV14",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -389,7 +459,9 @@
       "sourceType": "YSP_CCTV",
       "order": 16,
       "yangshipinPid": "600001815",
-      "yangshipinStreamId": "2027249001"
+      "yangshipinStreamId": "2027249001",
+      "epgId": "CCTV15",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -398,7 +470,9 @@
       "sourceType": "YSP_CCTV",
       "order": 17,
       "yangshipinPid": "600098637",
-      "yangshipinStreamId": "2027249101"
+      "yangshipinStreamId": "2027249101",
+      "epgId": "CCTV16",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -407,7 +481,9 @@
       "sourceType": "YSP_CCTV",
       "order": 18,
       "yangshipinPid": "600099502",
-      "yangshipinStreamId": "2027249301"
+      "yangshipinStreamId": "2027249301",
+      "epgId": "CCTV16",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -416,7 +492,9 @@
       "sourceType": "YSP_CCTV",
       "order": 19,
       "yangshipinPid": "600001810",
-      "yangshipinStreamId": "2027249401"
+      "yangshipinStreamId": "2027249401",
+      "epgId": "CCTV17",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -425,7 +503,9 @@
       "sourceType": "YSP_CCTV",
       "order": 20,
       "yangshipinPid": "600002264",
-      "yangshipinStreamId": "2029810301"
+      "yangshipinStreamId": "2029810301",
+      "epgId": "CCTV4K",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -434,7 +514,9 @@
       "sourceType": "YSP_CCTV",
       "order": 21,
       "yangshipinPid": "600156816",
-      "yangshipinStreamId": "2026774101"
+      "yangshipinStreamId": "2026774101",
+      "epgId": "CCTV8",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -452,7 +534,9 @@
       "sourceType": "YSP_CCTV",
       "order": 23,
       "yangshipinPid": "600084704",
-      "yangshipinStreamId": "2024181801"
+      "yangshipinStreamId": "2024181801",
+      "epgId": "CGTN法语",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -461,7 +545,9 @@
       "sourceType": "YSP_CCTV",
       "order": 24,
       "yangshipinPid": "600084758",
-      "yangshipinStreamId": "2024181901"
+      "yangshipinStreamId": "2024181901",
+      "epgId": "CGTN俄语",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_cctv",
@@ -497,7 +583,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 1,
       "yangshipinPid": "600002309",
-      "yangshipinStreamId": "2024052703"
+      "yangshipinStreamId": "2024052703",
+      "epgId": "北京卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -506,7 +594,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 2,
       "yangshipinPid": "600002521",
-      "yangshipinStreamId": "2024171103"
+      "yangshipinStreamId": "2024171103",
+      "epgId": "江苏卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -515,7 +605,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 3,
       "yangshipinPid": "600002483",
-      "yangshipinStreamId": "2024054503"
+      "yangshipinStreamId": "2024054503",
+      "epgId": "东方卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -524,7 +616,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 4,
       "yangshipinPid": "600002520",
-      "yangshipinStreamId": "2024054703"
+      "yangshipinStreamId": "2024054703",
+      "epgId": "浙江卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -533,7 +627,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 5,
       "yangshipinPid": "600002475",
-      "yangshipinStreamId": "2024054803"
+      "yangshipinStreamId": "2024054803",
+      "epgId": "湖南卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -542,7 +638,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 6,
       "yangshipinPid": "600002508",
-      "yangshipinStreamId": "2024171203"
+      "yangshipinStreamId": "2024171203",
+      "epgId": "湖北卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -551,7 +649,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 7,
       "yangshipinPid": "600002485",
-      "yangshipinStreamId": "2024060903"
+      "yangshipinStreamId": "2024060903",
+      "epgId": "广东卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -560,7 +660,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 8,
       "yangshipinPid": "600002509",
-      "yangshipinStreamId": "2024060703"
+      "yangshipinStreamId": "2024060703",
+      "epgId": "广西卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -569,7 +671,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 9,
       "yangshipinPid": "600002498",
-      "yangshipinStreamId": "2029797003"
+      "yangshipinStreamId": "2029797003",
+      "epgId": "黑龙江卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -578,7 +682,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 10,
       "yangshipinPid": "600002506",
-      "yangshipinStreamId": "2024055603"
+      "yangshipinStreamId": "2024055603",
+      "epgId": "海南卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -587,7 +693,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 11,
       "yangshipinPid": "600002531",
-      "yangshipinStreamId": "2024061103"
+      "yangshipinStreamId": "2024061103",
+      "epgId": "重庆卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -596,7 +704,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 12,
       "yangshipinPid": "600002481",
-      "yangshipinStreamId": "2024061303"
+      "yangshipinStreamId": "2024061303",
+      "epgId": "深圳卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -605,7 +715,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 13,
       "yangshipinPid": "600002516",
-      "yangshipinStreamId": "2024061403"
+      "yangshipinStreamId": "2024061403",
+      "epgId": "四川卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -614,7 +726,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 14,
       "yangshipinPid": "600002525",
-      "yangshipinStreamId": "2029797303"
+      "yangshipinStreamId": "2029797303",
+      "epgId": "河南卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -623,7 +737,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 15,
       "yangshipinPid": "600002484",
-      "yangshipinStreamId": "2024061503"
+      "yangshipinStreamId": "2024061503",
+      "epgId": "东南卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -632,7 +748,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 16,
       "yangshipinPid": "600002490",
-      "yangshipinStreamId": "2024061603"
+      "yangshipinStreamId": "2024061603",
+      "epgId": "贵州卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -641,7 +759,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 17,
       "yangshipinPid": "600002503",
-      "yangshipinStreamId": "2024061703"
+      "yangshipinStreamId": "2024061703",
+      "epgId": "江西卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -650,7 +770,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 18,
       "yangshipinPid": "600002505",
-      "yangshipinStreamId": "2024171303"
+      "yangshipinStreamId": "2024171303",
+      "epgId": "辽宁卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -659,7 +781,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 19,
       "yangshipinPid": "600002532",
-      "yangshipinStreamId": "2024171403"
+      "yangshipinStreamId": "2024171403",
+      "epgId": "安徽卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -668,7 +792,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 20,
       "yangshipinPid": "600002493",
-      "yangshipinStreamId": "2024171503"
+      "yangshipinStreamId": "2024171503",
+      "epgId": "河北卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -677,7 +803,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 21,
       "yangshipinPid": "600002513",
-      "yangshipinStreamId": "2029787903"
+      "yangshipinStreamId": "2029787903",
+      "epgId": "山东卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -686,7 +814,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 22,
       "yangshipinPid": "600152137",
-      "yangshipinStreamId": "2019927003"
+      "yangshipinStreamId": "2019927003",
+      "epgId": "天津卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -695,7 +825,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 23,
       "yangshipinPid": "600190405",
-      "yangshipinStreamId": "2025561503"
+      "yangshipinStreamId": "2025561503",
+      "epgId": "吉林卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -704,7 +836,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 24,
       "yangshipinPid": "600190400",
-      "yangshipinStreamId": "2029795103"
+      "yangshipinStreamId": "2029795103",
+      "epgId": "陕西卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -713,7 +847,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 25,
       "yangshipinPid": "600190408",
-      "yangshipinStreamId": "2025561703"
+      "yangshipinStreamId": "2025561703",
+      "epgId": "甘肃卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -722,7 +858,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 26,
       "yangshipinPid": "600190737",
-      "yangshipinStreamId": "2025608503"
+      "yangshipinStreamId": "2025608503",
+      "epgId": "宁夏卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -731,7 +869,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 27,
       "yangshipinPid": "600190401",
-      "yangshipinStreamId": "2025561203"
+      "yangshipinStreamId": "2025561203",
+      "epgId": "内蒙古卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -740,7 +880,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 28,
       "yangshipinPid": "600190402",
-      "yangshipinStreamId": "2025561303"
+      "yangshipinStreamId": "2025561303",
+      "epgId": "云南卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -749,7 +891,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 29,
       "yangshipinPid": "600190407",
-      "yangshipinStreamId": "2025560803"
+      "yangshipinStreamId": "2025560803",
+      "epgId": "山西卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -758,7 +902,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 30,
       "yangshipinPid": "600190406",
-      "yangshipinStreamId": "2025559103"
+      "yangshipinStreamId": "2025559103",
+      "epgId": "青海卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -767,7 +913,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 31,
       "yangshipinPid": "600190403",
-      "yangshipinStreamId": "2025558003"
+      "yangshipinStreamId": "2025558003",
+      "epgId": "西藏卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "ysp_satellite",
@@ -785,7 +933,9 @@
       "sourceType": "YSP_SATELLITE",
       "order": 33,
       "yangshipinPid": "600152138",
-      "yangshipinStreamId": "2019927403"
+      "yangshipinStreamId": "2019927403",
+      "epgId": "新疆卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "hunan",
@@ -803,7 +953,9 @@
       "sourceType": "MGTV",
       "order": 2,
       "activityId": "280",
-      "cameraId": "280"
+      "cameraId": "280",
+      "epgId": "湖南经视",
+      "epgSource": "112114"
     },
     {
       "groupId": "hunan",
@@ -812,7 +964,9 @@
       "sourceType": "MGTV",
       "order": 3,
       "activityId": "344",
-      "cameraId": "344"
+      "cameraId": "344",
+      "epgId": "湖南娱乐",
+      "epgSource": "112114"
     },
     {
       "groupId": "hunan",
@@ -839,7 +993,9 @@
       "sourceType": "MGTV",
       "order": 6,
       "activityId": "221",
-      "cameraId": "221"
+      "cameraId": "221",
+      "epgId": "湖南电影",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -850,7 +1006,9 @@
       "channelId": "670",
       "en": "jsws",
       "stream": "jswspro",
-      "path": "applive/jswspro.m3u8"
+      "path": "applive/jswspro.m3u8",
+      "epgId": "江苏卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -861,7 +1019,9 @@
       "channelId": "669",
       "en": "jscs",
       "stream": "jscspro",
-      "path": "applive/jscspro.m3u8"
+      "path": "applive/jscspro.m3u8",
+      "epgId": "江苏城市",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -883,7 +1043,9 @@
       "channelId": "663",
       "en": "jszy",
       "stream": "jszypro",
-      "path": "applive/jszypro.m3u8"
+      "path": "applive/jszypro.m3u8",
+      "epgId": "江苏综艺",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -894,7 +1056,9 @@
       "channelId": "664",
       "en": "jsys",
       "stream": "jsyspro",
-      "path": "applive/jsyspro.m3u8"
+      "path": "applive/jsyspro.m3u8",
+      "epgId": "江苏影视",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -927,7 +1091,9 @@
       "channelId": "671",
       "en": "jsgj",
       "stream": "jsgjpro",
-      "path": "applive/jsgjpro.m3u8"
+      "path": "applive/jsgjpro.m3u8",
+      "epgId": "江苏国际",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -960,7 +1126,9 @@
       "channelId": "632",
       "en": "nanjing",
       "stream": "nanjing",
-      "path": "live/nanjing.m3u8"
+      "path": "live/nanjing.m3u8",
+      "epgId": "南京新闻综合",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -993,7 +1161,9 @@
       "channelId": "619",
       "en": "nantong",
       "stream": "nantong",
-      "path": "live/nantong.m3u8"
+      "path": "live/nantong.m3u8",
+      "epgId": "南通新闻综合",
+      "epgSource": "112114"
     },
     {
       "groupId": "jiangsu",
@@ -1189,7 +1359,9 @@
       "sourceType": "KANKANEWS",
       "order": 1,
       "channelId": "1",
-      "stream": "dfws4k"
+      "stream": "dfws4k",
+      "epgId": "东方卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "shanghai",
@@ -1198,7 +1370,9 @@
       "sourceType": "KANKANEWS",
       "order": 2,
       "channelId": "5",
-      "stream": "dycj"
+      "stream": "dycj",
+      "epgId": "第一财经",
+      "epgSource": "112114"
     },
     {
       "groupId": "shanghai",
@@ -1313,7 +1487,9 @@
       "sourceType": "WEBVIEW",
       "order": 1,
       "webUrl": "https://www.gdtv.cn/tvChannelDetail/43",
-      "fullscreenType": "GDTV_PC"
+      "fullscreenType": "GDTV_PC",
+      "epgId": "广东卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "gdtv",
@@ -1322,7 +1498,9 @@
       "sourceType": "WEBVIEW",
       "order": 2,
       "webUrl": "https://www.gdtv.cn/tvChannelDetail/44",
-      "fullscreenType": "GDTV_PC"
+      "fullscreenType": "GDTV_PC",
+      "epgId": "广东珠江",
+      "epgSource": "112114"
     },
     {
       "groupId": "gdtv",
@@ -1331,7 +1509,9 @@
       "sourceType": "WEBVIEW",
       "order": 3,
       "webUrl": "https://www.gdtv.cn/tvChannelDetail/45",
-      "fullscreenType": "GDTV_PC"
+      "fullscreenType": "GDTV_PC",
+      "epgId": "广东新闻",
+      "epgSource": "112114"
     },
     {
       "groupId": "gdtv",
@@ -1349,7 +1529,9 @@
       "sourceType": "WEBVIEW",
       "order": 5,
       "webUrl": "https://www.gdtv.cn/tvChannelDetail/47",
-      "fullscreenType": "GDTV_PC"
+      "fullscreenType": "GDTV_PC",
+      "epgId": "广东体育",
+      "epgSource": "112114"
     },
     {
       "groupId": "gdtv",
@@ -1358,7 +1540,9 @@
       "sourceType": "WEBVIEW",
       "order": 6,
       "webUrl": "https://www.gdtv.cn/tvChannelDetail/51",
-      "fullscreenType": "GDTV_PC"
+      "fullscreenType": "GDTV_PC",
+      "epgId": "大湾区卫视",
+      "epgSource": "112114"
     },
     {
       "groupId": "gdtv",
@@ -1376,7 +1560,9 @@
       "sourceType": "WEBVIEW",
       "order": 8,
       "webUrl": "https://www.gdtv.cn/tvChannelDetail/53",
-      "fullscreenType": "GDTV_PC"
+      "fullscreenType": "GDTV_PC",
+      "epgId": "广东影视",
+      "epgSource": "112114"
     },
     {
       "groupId": "gdtv",
@@ -1421,7 +1607,9 @@
       "sourceType": "WEBVIEW",
       "order": 13,
       "webUrl": "https://www.gdtv.cn/tvChannelDetail/74",
-      "fullscreenType": "GDTV_PC"
+      "fullscreenType": "GDTV_PC",
+      "epgId": "广东移动",
+      "epgSource": "112114"
     },
     {
       "groupId": "gdtv",
